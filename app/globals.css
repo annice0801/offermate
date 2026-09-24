@@ -1,26 +1,198 @@
+/**
+ * 全站樣式 — Glassmorphism Clinic Style
+ * ------------------------------------------------------------
+ * 風格重點：
+ *   1. 冷調、潔淨的「診所感」配色：霧白底 + 深海軍藍文字 + 醫療青綠強調色
+ *   2. 毛玻璃（glass）：半透明白底 + backdrop-filter 模糊 + 亮白邊框
+ *   3. 背景有緩慢漂浮的柔和色塊，透過毛玻璃看出去有層次感
+ *
+ * Tailwind v4 直接在 CSS 的 @theme 定義設計變數，
+ * 定義 --color-ink 之後就能使用 bg-ink、text-ink 等 class。
+ */
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* 色彩 */
+  --color-paper: #edf3f7; /* 頁面底色：冷調霧白 */
+  --color-card: #ffffff; /* 實心卡片底色 */
+  --color-ink: #0e2233; /* 主要文字 / 深色區塊：深海軍藍 */
+  --color-muted: #587080; /* 次要文字 */
+  --color-line: #d3e0e8; /* 邊框、分隔線 */
+  --color-accent: #0b8a87; /* 品牌強調色：醫療青綠（對白底對比度 > 4.5） */
+  --color-accent-bright: #2cc7c0; /* 亮青綠：用在波形、光暈等裝飾 */
+  --color-accent-soft: #d6f2f0; /* 強調色淡色版 */
+  --color-sky: #9cc9ff; /* 背景色塊：天空藍 */
+  --color-lilac: #c9bdff; /* 背景色塊：淡紫 */
+  --color-good: #1d7a52; /* 正向（優點） */
+  --color-good-soft: #dcf2e6;
+  --color-warn: #a1620a; /* 中等 */
+  --color-warn-soft: #fbeed6;
+  --color-bad: #c23b35; /* 負向（待改進） */
+  --color-bad-soft: #fbe2e0;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* 字體：內文與標題用 Geist；襯線體 Instrument Serif 只用在診斷書簽名；中文退回系統字體 */
+  --font-sans: var(--font-geist-sans), "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  --font-serif: var(--font-instrument-serif), "Songti TC", "Noto Serif TC", serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* 自訂動畫：animate-rise、animate-marquee、animate-float、animate-wave */
+  --animate-rise: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-float: float 18s ease-in-out infinite;
+  --animate-wave: wave 1.1s ease-in-out infinite;
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -30px) scale(1.06); }
+    66% { transform: translate(-30px, 25px) scale(0.96); }
+  }
+  /* 波形：每根音柱上下伸縮 */
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.25); }
+    50% { transform: scaleY(1); }
   }
 }
 
+/*
+ * 毛玻璃工具類：@utility 讓它像 Tailwind 內建 class 一樣可以搭配 hover:、md: 等前綴
+ *   glass        → 一般面板
+ *   glass-strong → 需要更高可讀性的面板（輸入框、診斷書）
+ */
+@utility glass {
+  background: rgb(255 255 255 / 0.55);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid rgb(255 255 255 / 0.75);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.8) inset,
+    0 20px 50px -24px rgb(14 34 51 / 0.25);
+}
+@utility glass-strong {
+  background: rgb(255 255 255 / 0.78);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  border: 1px solid rgb(255 255 255 / 0.9);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.9) inset,
+    0 30px 70px -30px rgb(14 34 51 / 0.3);
+}
+
+/* 品牌漸層文字（非斜體，用色彩營造層次） */
+@utility text-gradient-brand {
+  background-image: linear-gradient(100deg, #0b8a87, #3f7fd6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/*
+ * 色彩視差文字：漸層比文字寬 3 倍，
+ * 捲動時由 JavaScript 更新 --scroll-progress（0 → 1），漸層跟著平移，
+ * 文字不動、顏色在流動，形成「以顏色做出的視差」。
+ */
+@utility text-parallax {
+  background-image: linear-gradient(
+    100deg,
+    #0b8a87 0%,
+    #2cc7c0 20%,
+    #3f7fd6 45%,
+    #7b6cf0 65%,
+    #2cc7c0 85%,
+    #0b8a87 100%
+  );
+  background-size: 300% 100%;
+  background-position: calc(var(--scroll-progress, 0) * 100%) 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 捲動進場：元素進入畫面時淡入上浮（由 <Reveal> 加上 data-shown） */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.9s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal[data-shown] {
+  opacity: 1;
+  transform: none;
+}
+
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--color-accent);
+  color: white;
+}
+
+/* 背景細格線紋理（很淡，只增加一點「醫療儀器」的精密感） */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--color-ink) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-ink) 4%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ---------- 列印（存成 PDF）時的樣式 ---------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  /* 只印出診斷書本體，隱藏頁首、頁尾、背景色塊與按鈕 */
+  body * {
+    visibility: hidden;
+  }
+  #diagnosis-report,
+  #diagnosis-report * {
+    visibility: visible;
+  }
+  #diagnosis-report {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+  }
+  /* 印表機不支援模糊效果，改成實心白底 */
+  .glass,
+  .glass-strong {
+    background: white !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-color: var(--color-line) !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* 尊重使用者「減少動態效果」的系統設定 */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  *, *::before, *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
 }
