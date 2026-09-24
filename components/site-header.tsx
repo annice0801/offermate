@@ -18,8 +18,8 @@ const NAV = [
   { href: "/#features", label: "功能" },
   { href: "/#report", label: "診斷書" },
   { href: "/blog", label: "職涯專欄" },
-  { href: "/#faq", label: "常見問題" },
   { href: "/#contact", label: "聯絡我們" },
+  { href: "/#faq", label: "常見問題" },
 ];
 
 export default function SiteHeader() {

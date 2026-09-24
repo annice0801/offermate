@@ -7,7 +7,7 @@
  *
  * 區塊順序：
  *   Hero → 產業跑馬燈 → 關於我們（痛點 + 自我鏡像修正）→ 功能 → 診斷書展示
- *   → 運作方式 → 職涯專欄（最新 3 篇）→ FAQ → 聯絡我們 / 功能建議 → 結尾 CTA
+ *   → 運作方式 → 行動呼籲（面試官已經就位）→ 職涯專欄（最新 3 篇）→ 聯絡我們 / 功能建議 → FAQ
  *
  * 響應式斷點（Tailwind 預設）：
  *   手機 < 640px（預設樣式）｜ sm ≥ 640 ｜ 平板 md ≥ 768 ｜ 電腦 lg ≥ 1024
@@ -337,6 +337,27 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ================= 行動呼籲：面試官已經就位 ================= */}
+      <section className="px-4 pt-20 sm:px-6 md:pt-24">
+        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-ink px-6 py-16 text-center text-white sm:px-8 md:py-20">
+          <Parallax speed={0.15} className="pointer-events-none absolute -top-20 left-1/4">
+            <div className="size-72 rounded-full bg-accent-bright/40 blur-3xl" />
+          </Parallax>
+          <Parallax speed={-0.1} className="pointer-events-none absolute -right-10 -bottom-24">
+            <div className="size-72 rounded-full bg-[#3f7fd6]/40 blur-3xl" />
+          </Parallax>
+          <Waveform active bars={48} className="relative mx-auto mb-10 h-10 max-w-xs sm:max-w-sm" />
+          <h2 className="relative text-3xl font-semibold tracking-tight text-balance sm:text-5xl">面試官已經就位，你呢？</h2>
+          <p className="relative mx-auto mt-5 max-w-md text-white/70">{SLOGAN}</p>
+          <Link
+            href="/interview"
+            className="relative mt-10 inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 font-medium text-ink transition hover:-translate-y-0.5 hover:bg-accent-bright"
+          >
+            開始模擬面試 <ArrowRight className="size-4" />
+          </Link>
+        </div>
+      </section>
+
       {/* ================= 職涯專欄：最新 3 篇 ================= */}
       <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6 md:pt-24">
         <Reveal className="flex flex-wrap items-end justify-between gap-4">
@@ -367,34 +388,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ================= FAQ ================= */}
-      <section id="faq" className="scroll-mt-16">
-        <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6 md:py-24">
-          <Reveal>
-            <SectionTitle eyebrow="FAQ" title="常見問題" />
-          </Reveal>
-          <div className="mt-12 space-y-3">
-            {FAQS.map((f, i) => (
-              <Reveal key={f.q} delay={i * 60}>
-                {/* 原生 <details> 就能做手風琴展開，不需要 JavaScript */}
-                <details className="glass group rounded-2xl px-5 py-4 sm:px-6 sm:py-5">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium sm:text-lg">
-                    {f.q}
-                    <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/70 transition group-open:rotate-45 group-open:bg-accent group-open:text-white">
-                      <Plus className="size-4" />
-                    </span>
-                  </summary>
-                  <p className="mt-3 leading-relaxed text-muted sm:pr-10">{f.a}</p>
-                </details>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ================= 聯絡我們 / 功能建議回報 ================= */}
       <section id="contact" className="scroll-mt-16">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-20 sm:px-6 md:pb-24 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 pt-20 sm:px-6 md:pt-24 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14">
           <Reveal>
             <SectionTitle eyebrow="Contact & Feedback" title="讓 OfferMate 變得更好" align="left" />
             <p className="mt-5 leading-relaxed text-muted">
@@ -421,26 +417,31 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ================= 結尾 CTA ================= */}
-      <section className="px-4 pb-16 sm:px-6 md:pb-20">
-        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-ink px-6 py-16 text-center text-white sm:px-8 md:py-20">
-          <Parallax speed={0.15} className="pointer-events-none absolute -top-20 left-1/4">
-            <div className="size-72 rounded-full bg-accent-bright/40 blur-3xl" />
-          </Parallax>
-          <Parallax speed={-0.1} className="pointer-events-none absolute -right-10 -bottom-24">
-            <div className="size-72 rounded-full bg-[#3f7fd6]/40 blur-3xl" />
-          </Parallax>
-          <Waveform active bars={48} className="relative mx-auto mb-10 h-10 max-w-xs sm:max-w-sm" />
-          <h2 className="relative text-3xl font-semibold tracking-tight text-balance sm:text-5xl">面試官已經就位，你呢？</h2>
-          <p className="relative mx-auto mt-5 max-w-md text-white/70">{SLOGAN}</p>
-          <Link
-            href="/interview"
-            className="relative mt-10 inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 font-medium text-ink transition hover:-translate-y-0.5 hover:bg-accent-bright"
-          >
-            開始模擬面試 <ArrowRight className="size-4" />
-          </Link>
+      {/* ================= FAQ ================= */}
+      <section id="faq" className="scroll-mt-16">
+        <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6 md:py-24">
+          <Reveal>
+            <SectionTitle eyebrow="FAQ" title="常見問題" />
+          </Reveal>
+          <div className="mt-12 space-y-3">
+            {FAQS.map((f, i) => (
+              <Reveal key={f.q} delay={i * 60}>
+                {/* 原生 <details> 就能做手風琴展開，不需要 JavaScript */}
+                <details className="glass group rounded-2xl px-5 py-4 sm:px-6 sm:py-5">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium sm:text-lg">
+                    {f.q}
+                    <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/70 transition group-open:rotate-45 group-open:bg-accent group-open:text-white">
+                      <Plus className="size-4" />
+                    </span>
+                  </summary>
+                  <p className="mt-3 leading-relaxed text-muted sm:pr-10">{f.a}</p>
+                </details>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
+
     </>
   );
 }
