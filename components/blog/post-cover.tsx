@@ -37,6 +37,7 @@ export default function PostCover({ post, size = "md", preload = false }: Props)
         fill
         unoptimized
         preload={preload}
+        title={`圖片：${post.photo.credit.author}（${post.photo.credit.license}，Wikimedia Commons）`}
         className="object-cover saturate-[.9] transition-transform duration-700 group-hover:scale-105"
         style={{ objectPosition: post.photo.position }}
       />

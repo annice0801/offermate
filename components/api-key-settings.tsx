@@ -6,6 +6,7 @@
  */
 "use client";
 
+import { Lock, ShieldCheck, TriangleAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { API_KEY_HEADER, maskKey, onOpenApiKeySettings, saveApiKey, useApiKey } from "@/lib/api-key";
 
@@ -83,7 +84,7 @@ function SettingsDialog({ savedKey, onClose }: { savedKey: string; onClose: () =
             <h2 id="api-key-title" className="mt-1 text-xl font-semibold">OpenAI API Key 設定</h2>
           </div>
           <button onClick={onClose} className="grid size-8 place-items-center rounded-full text-muted hover:bg-white" aria-label="關閉">
-            ✕
+            <X className="size-4" />
           </button>
         </div>
 
@@ -162,9 +163,16 @@ function SettingsDialog({ savedKey, onClose }: { savedKey: string; onClose: () =
 
         {/* 隱私說明 */}
         <ul className="mt-5 space-y-1.5 border-t border-ink/10 pt-4 text-xs leading-relaxed text-muted">
-          <li>🔒 金鑰只儲存在這個瀏覽器的 localStorage，不會上傳到任何資料庫。</li>
-          <li>↗ 每次面試請求會透過 HTTPS 帶給伺服器轉呼叫 OpenAI，伺服器不保存、不記錄。</li>
-          <li>⚠ 請勿在公用電腦上儲存金鑰；使用完畢可按「清除」。</li>
+          {[
+            { Icon: Lock, text: "金鑰只儲存在這個瀏覽器的 localStorage，不會上傳到任何資料庫。" },
+            { Icon: ShieldCheck, text: "每次面試請求會透過 HTTPS 帶給伺服器轉呼叫 OpenAI，伺服器不保存、不記錄。" },
+            { Icon: TriangleAlert, text: "請勿在公用電腦上儲存金鑰；使用完畢可按「清除」。" },
+          ].map(({ Icon, text }) => (
+            <li key={text} className="flex gap-2">
+              <Icon className="mt-0.5 size-3.5 shrink-0 text-accent" />
+              {text}
+            </li>
+          ))}
         </ul>
       </div>
     </div>

@@ -7,6 +7,7 @@
  */
 "use client";
 
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { InterviewSetup } from "@/lib/types";
 import { JOB_TEMPLATES } from "@/lib/templates";
@@ -157,7 +158,7 @@ export default function SetupForm({ initial, loading, error, onSubmit }: Props) 
                 <option value={OTHER_INDUSTRY}>其他（自行輸入）</option>
               </select>
               {/* 自訂下拉箭頭（appearance-none 把原生箭頭隱藏了） */}
-              <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted">⌄</span>
+              <ChevronDown className="pointer-events-none absolute top-1/2 right-4 size-4 -translate-y-1/2 text-muted" />
             </div>
             {industryChoice === OTHER_INDUSTRY && (
               <input
@@ -224,7 +225,7 @@ export default function SetupForm({ initial, loading, error, onSubmit }: Props) 
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-ink py-4 font-medium text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-ink/10 disabled:text-muted"
         >
           開始面試
-          <span className="transition-transform group-hover:translate-x-1">→</span>
+          <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
         </button>
       </form>
     </div>
@@ -286,7 +287,7 @@ function ResearchLoader({ company }: { company: string }) {
             }`}
           >
             <span className={`grid size-5 place-items-center rounded-full text-[10px] ${i < step ? "bg-accent text-white" : i === step ? "bg-ink text-white" : "border border-ink/15"}`}>
-              {i < step ? "✓" : i + 1}
+              {i < step ? <Check className="size-3" strokeWidth={3} /> : i + 1}
             </span>
             {s}
           </li>

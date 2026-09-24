@@ -9,6 +9,7 @@
  */
 "use client";
 
+import { ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Interviewer, InterviewSetup, Question, Research, Turn } from "@/lib/types";
 import type { Loading } from "./interview-app";
@@ -224,7 +225,7 @@ export default function SessionView(props: Props) {
                         rel="noopener noreferrer"
                         className="group flex items-baseline gap-2 text-xs text-muted hover:text-ink"
                       >
-                        <span className="text-accent">↗</span>
+                        <ArrowUpRight className="size-3.5 shrink-0 self-center text-accent" />
                         <span className="line-clamp-1 group-hover:underline">{s.title || hostname(s.url)}</span>
                       </a>
                     </li>

@@ -6,6 +6,7 @@
  */
 "use client";
 
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -37,12 +38,7 @@ export default function MobileNav({ items }: { items: { href: string; label: str
         aria-label={isOpen ? "關閉選單" : "開啟選單"}
         className="grid size-9 place-items-center rounded-full bg-white/60 transition hover:bg-white"
       >
-        {/* 三條線 ↔ 叉叉 的轉場動畫 */}
-        <span className="relative block h-3 w-4">
-          <span className={`absolute left-0 h-0.5 w-4 rounded bg-ink transition-all ${isOpen ? "top-1.5 rotate-45" : "top-0"}`} />
-          <span className={`absolute top-1.5 left-0 h-0.5 w-4 rounded bg-ink transition-opacity ${isOpen ? "opacity-0" : ""}`} />
-          <span className={`absolute left-0 h-0.5 w-4 rounded bg-ink transition-all ${isOpen ? "top-1.5 -rotate-45" : "top-3"}`} />
-        </span>
+        {isOpen ? <X className="size-4" /> : <Menu className="size-4" />}
       </button>
 
       {isOpen && (

@@ -8,7 +8,7 @@
  *
  * 圖片：皆來自 Wikimedia Commons 的自由授權圖片（CC0 / 公有領域 / CC BY / CC BY-SA），
  * 下載後放在 public/blog/（封面另有 800px 的 -thumb 縮圖）。CC BY 系列授權要求標示作者與授權條款，
- * 所以每張圖都記錄 credit，並在文章頁與 /blog 頁尾顯示。
+ * 所以每張圖都記錄 credit，並在各篇文章文末的「本文圖片來源」顯示。
  */
 
 /** 圖片授權資訊 */
@@ -563,8 +563,3 @@ export const POSTS: Post[] = [
     ],
   },
 ];
-
-/** 所有文章用到的圖片（封面 + 內文），給圖片來源清單使用 */
-export function allPhotos(): Photo[] {
-  return POSTS.flatMap((p) => [p.photo, ...p.content.flatMap((b) => (b.type === "image" ? [b.photo] : []))]);
-}

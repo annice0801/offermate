@@ -6,6 +6,7 @@
  */
 "use client";
 
+import { Check, Send } from "lucide-react";
 import { useState } from "react";
 import { FEEDBACK_TYPES, type FeedbackRequest, type FeedbackType } from "@/lib/types";
 
@@ -45,7 +46,9 @@ export default function ContactForm() {
   if (status === "sent") {
     return (
       <div className="glass-strong flex flex-col items-center rounded-3xl px-6 py-14 text-center" role="status">
-        <span className="grid size-14 place-items-center rounded-full bg-good-soft text-2xl text-good">✓</span>
+        <span className="grid size-14 place-items-center rounded-full bg-good-soft text-good">
+          <Check className="size-7" strokeWidth={2.5} />
+        </span>
         <h3 className="mt-5 text-xl font-semibold">已收到，謝謝你！</h3>
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
           我們會仔細閱讀每一則回饋，必要時會透過 <span className="font-medium text-ink">{email}</span> 與你聯繫。
@@ -143,7 +146,10 @@ export default function ContactForm() {
         disabled={status === "sending" || message.length > MAX}
         className="w-full rounded-full bg-ink py-3.5 font-medium text-white transition hover:bg-accent disabled:bg-ink/10 disabled:text-muted sm:w-auto sm:px-10"
       >
-        {status === "sending" ? "送出中…" : "送出"}
+        <span className="inline-flex items-center justify-center gap-2">
+          {status === "sending" ? "送出中…" : "送出"}
+          <Send className="size-4" />
+        </span>
       </button>
     </form>
   );

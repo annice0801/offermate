@@ -10,6 +10,7 @@
  *
  * 版面：電腦版左側內文、右側固定目錄；手機 / 平板目錄收合在內文上方。
  */
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -46,6 +47,12 @@ export default async function PostPage({ params }: PageProps<"/blog/[slug]">) {
   const toc = post.content.filter((b) => b.type === "h2");
   const related = getRelated(post);
 
+  // 本文用到的圖片：封面 + 內文配圖
+  const photos = [
+    { label: "封面", photo: post.photo },
+    ...post.content.flatMap((b) => (b.type === "image" ? [{ label: "內文", photo: b.photo }] : [])),
+  ];
+
   return (
     <>
       <ReadingProgress />
@@ -70,15 +77,10 @@ export default async function PostPage({ params }: PageProps<"/blog/[slug]">) {
           </div>
         </header>
 
-        <figure className="animate-rise mt-8 [animation-delay:100ms] md:mt-10">
-          <div className="overflow-hidden rounded-3xl shadow-[0_40px_80px_-40px_rgba(14,34,51,0.5)]">
-            {/* 文章頁的封面是首屏最大的圖片，preload 讓它優先載入 */}
-            <PostCover post={post} size="hero" preload />
-          </div>
-          <figcaption className="mt-3 flex justify-end">
-            <PhotoCredit credit={post.photo.credit} />
-          </figcaption>
-        </figure>
+        <div className="animate-rise mt-8 overflow-hidden rounded-3xl shadow-[0_40px_80px_-40px_rgba(14,34,51,0.5)] [animation-delay:100ms] md:mt-10">
+          {/* 文章頁的封面是首屏最大的圖片，preload 讓它優先載入 */}
+          <PostCover post={post} size="hero" preload />
+        </div>
 
         <div className="mt-10 grid gap-10 md:mt-14 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-16">
           <div className="min-w-0">
@@ -93,8 +95,21 @@ export default async function PostPage({ params }: PageProps<"/blog/[slug]">) {
             <div className="max-w-2xl">
               <PostContent blocks={post.content} />
 
+              {/* 本文圖片來源：CC BY / CC BY-SA 要求標示作者與授權，集中放在文末，版面更乾淨 */}
+              <section className="mt-12 rounded-2xl bg-white/50 px-5 py-4">
+                <h2 className="text-xs font-semibold text-ink/70">本文圖片來源</h2>
+                <ul className="mt-2 space-y-1">
+                  {photos.map(({ label, photo }) => (
+                    <li key={photo.src} className="flex flex-wrap gap-x-2">
+                      <span className="text-[11px] text-ink/60">{label}｜{photo.alt}</span>
+                      <PhotoCredit credit={photo.credit} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
               {/* 標籤 */}
-              <div className="mt-12 flex flex-wrap gap-2 border-t border-ink/10 pt-6">
+              <div className="mt-6 flex flex-wrap gap-2">
                 {post.tags.map((t) => (
                   <span key={t} className="rounded-full bg-white/70 px-3 py-1 text-xs text-muted">
                     #{t}
@@ -114,7 +129,7 @@ export default async function PostPage({ params }: PageProps<"/blog/[slug]">) {
                   href="/interview"
                   className="relative mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-ink transition hover:bg-accent-bright"
                 >
-                  開始模擬面試 →
+                  開始模擬面試 <ArrowRight className="size-4" />
                 </Link>
               </aside>
             </div>

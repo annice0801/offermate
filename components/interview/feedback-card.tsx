@@ -3,6 +3,7 @@
  * 面試進行中與診斷書的逐題回顧都會用到
  * 反問環節（reverse）時，標題改為評估「提問品質」，示範改寫改為「更有高度的提問」
  */
+import { ChevronDown } from "lucide-react";
 import type { AnswerFeedback } from "@/lib/types";
 
 /** 依分數決定顏色：8 分以上綠、5~7 分琥珀、4 分以下紅 */
@@ -44,7 +45,7 @@ export default function FeedbackCard({ feedback, reverse = false, defaultOpen = 
       <details open={defaultOpen} className="group mt-3 rounded-2xl bg-white/60 p-4">
         <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
           {reverse ? "更有高度的提問示範" : "示範改寫"}
-          <span className="text-muted transition group-open:rotate-180">⌄</span>
+          <ChevronDown className="size-4 text-muted transition group-open:rotate-180" />
         </summary>
         <p className="mt-3 text-sm leading-relaxed whitespace-pre-line text-ink/80">{feedback.improvedAnswer}</p>
       </details>

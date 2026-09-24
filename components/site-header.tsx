@@ -7,6 +7,7 @@
  *   手機 / 平板     → Logo ｜ API Key + 開始 + 漢堡選單
  * 導覽連結使用 /#about 這種寫法，在 /interview 頁點擊也能跳回首頁對應區塊。
  */
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Logo from "./logo";
 import ApiKeySettings from "./api-key-settings";
@@ -44,7 +45,7 @@ export default function SiteHeader() {
           >
             <span className="hidden sm:inline">開始模擬面試</span>
             <span className="sm:hidden">開始</span>
-            <span className="transition-transform group-hover:translate-x-0.5">→</span>
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <MobileNav items={NAV} />
         </div>

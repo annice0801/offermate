@@ -16,6 +16,7 @@
  */
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import { COMPETENCIES, type FinalReport, type Interviewer, type InterviewSetup, type Turn } from "@/lib/types";
@@ -263,7 +264,7 @@ export default function ReportView({ setup, interviewer, report, history, onRest
                       <span className="line-clamp-1 text-sm font-medium">{t.question.text}</span>
                     </span>
                     <span data-export-ignore className="text-muted transition group-open:rotate-180">
-                      ⌄
+                      <ChevronDown className="size-4" />
                     </span>
                   </summary>
                   <div className="space-y-4 border-t border-ink/10 p-4">

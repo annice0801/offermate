@@ -6,8 +6,7 @@
  */
 import type { Metadata } from "next";
 import BlogList from "@/components/blog/blog-list";
-import PhotoCredit from "@/components/blog/photo-credit";
-import { POSTS, allPhotos } from "@/lib/posts";
+import { POSTS } from "@/lib/posts";
 
 export const metadata: Metadata = {
   title: "職涯專欄 — OfferMate",
@@ -31,20 +30,6 @@ export default function BlogPage() {
       </header>
 
       <BlogList posts={posts} />
-
-      {/* 圖片來源：列表與首頁的封面照片都在這裡統一標示授權 */}
-      <section id="credits" className="mt-20 scroll-mt-24 border-t border-ink/10 pt-8">
-        <h2 className="text-sm font-semibold">圖片來源</h2>
-        <p className="mt-1 text-xs text-muted">本專欄圖片皆取自 Wikimedia Commons，依各自的自由授權條款使用。</p>
-        <ul className="mt-4 grid gap-x-8 gap-y-1.5 sm:grid-cols-2">
-          {allPhotos().map((photo) => (
-            <li key={photo.src} className="flex flex-wrap gap-x-2 text-[11px] text-muted">
-              <span className="shrink-0 text-ink/60">{photo.alt}</span>
-              <PhotoCredit credit={photo.credit} />
-            </li>
-          ))}
-        </ul>
-      </section>
     </div>
   );
 }

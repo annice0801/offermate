@@ -12,6 +12,7 @@
  * 響應式斷點（Tailwind 預設）：
  *   手機 < 640px（預設樣式）｜ sm ≥ 640 ｜ 平板 md ≥ 768 ｜ 電腦 lg ≥ 1024
  */
+import { ArrowRight, Bug, Check, Handshake, Lightbulb, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Waveform from "@/components/waveform";
 import RadarChart from "@/components/radar-chart";
@@ -140,7 +141,7 @@ export default function Home() {
                 className="group inline-flex items-center justify-center gap-2 rounded-full bg-ink px-7 py-3.5 font-medium text-white shadow-[0_12px_30px_-10px] shadow-ink/50 transition hover:-translate-y-0.5 hover:bg-accent"
               >
                 免費開始模擬面試
-                <span className="transition-transform group-hover:translate-x-1">→</span>
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link href="#about" className="glass inline-flex justify-center rounded-full px-6 py-3.5 font-medium transition hover:bg-white/80">
                 為什麼是 OfferMate
@@ -163,7 +164,7 @@ export default function Home() {
           {[...INDUSTRIES, ...INDUSTRIES].map((name, i) => (
             <span key={i} className="flex items-center gap-8 text-base text-muted sm:gap-12 sm:text-xl">
               {name}
-              <span className="text-accent-bright">✚</span>
+              <Sparkles className="size-4 text-accent-bright" aria-hidden />
             </span>
           ))}
         </div>
@@ -214,7 +215,9 @@ export default function Home() {
             <ul className="mt-8 space-y-4">
               {OUTCOMES.map((o) => (
                 <li key={o.title} className="flex gap-3">
-                  <span className="mt-1 grid size-5 shrink-0 place-items-center rounded-full bg-accent text-[10px] text-white">✓</span>
+                  <span className="mt-1 grid size-5 shrink-0 place-items-center rounded-full bg-accent text-white">
+                    <Check className="size-3" strokeWidth={3} />
+                  </span>
                   <span>
                     <span className="font-semibold">{o.title}</span>
                     <span className="block text-sm leading-relaxed text-muted">{o.body}</span>
@@ -271,7 +274,9 @@ export default function Home() {
               <span className="relative mt-10 text-2xl leading-tight font-semibold sm:text-3xl">
                 現在就來
                 <br />
-                練一場 →
+                <span className="inline-flex items-center gap-2">
+                  練一場 <ArrowRight className="size-6 transition-transform group-hover:translate-x-1" />
+                </span>
               </span>
             </Link>
           </Reveal>
@@ -288,7 +293,9 @@ export default function Home() {
           <ul className="mt-8 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-1">
             {["六角形戰力雷達圖", "反問環節：思考高度與提問品質", "建議關鍵字與改進建議", "附實施日期的行動計畫", "一鍵存成 PDF / PNG"].map((t) => (
               <li key={t} className="flex items-center gap-3">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent text-[10px] text-white">✓</span>
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent text-white">
+                  <Check className="size-3" strokeWidth={3} />
+                </span>
                 {t}
               </li>
             ))}
@@ -334,14 +341,9 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6 md:pt-24">
         <Reveal className="flex flex-wrap items-end justify-between gap-4">
           <SectionTitle eyebrow="Journal" title="職涯專欄" align="left" />
-          <div className="flex items-center gap-4">
-            <Link href="/blog#credits" className="text-xs text-muted hover:text-ink hover:underline">
-              圖片來源
-            </Link>
-            <Link href="/blog" className="text-sm font-medium text-accent hover:underline">
-              看全部文章 →
-            </Link>
-          </div>
+          <Link href="/blog" className="group inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">
+            看全部文章 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
         </Reveal>
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[...POSTS]
@@ -379,7 +381,7 @@ export default function Home() {
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium sm:text-lg">
                     {f.q}
                     <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/70 transition group-open:rotate-45 group-open:bg-accent group-open:text-white">
-                      +
+                      <Plus className="size-4" />
                     </span>
                   </summary>
                   <p className="mt-3 leading-relaxed text-muted sm:pr-10">{f.a}</p>
@@ -399,9 +401,18 @@ export default function Home() {
               有想要的新功能、遇到問題，或想洽談合作？留下你的 Email 與內容，我們會仔細閱讀每一則回饋，並在需要時回覆你。
             </p>
             <ul className="mt-8 space-y-3 text-sm text-muted">
-              <li>💡 功能建議：想在面試中練習什麼？</li>
-              <li>🐞 問題回報：哪個步驟出了狀況？</li>
-              <li>🤝 合作洽詢：學校、社群與企業合作</li>
+              {[
+                { Icon: Lightbulb, text: "功能建議：想在面試中練習什麼？" },
+                { Icon: Bug, text: "問題回報：哪個步驟出了狀況？" },
+                { Icon: Handshake, text: "合作洽詢：學校、社群與企業合作" },
+              ].map(({ Icon, text }) => (
+                <li key={text} className="flex items-center gap-3">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                    <Icon className="size-4" />
+                  </span>
+                  {text}
+                </li>
+              ))}
             </ul>
           </Reveal>
           <Reveal delay={100}>
@@ -426,7 +437,7 @@ export default function Home() {
             href="/interview"
             className="relative mt-10 inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 font-medium text-ink transition hover:-translate-y-0.5 hover:bg-accent-bright"
           >
-            開始模擬面試 →
+            開始模擬面試 <ArrowRight className="size-4" />
           </Link>
         </div>
       </section>
@@ -483,7 +494,9 @@ function HeroPreview() {
       {/* 浮動標籤：以不同速度移動，增加層次 */}
       <Parallax speed={-0.12} className="absolute -bottom-5 -left-2 sm:-left-4">
         <div className="glass rounded-2xl px-4 py-3 text-xs">
-          <span className="text-accent">●</span> 已參考 6 篇面試心得
+          <span className="inline-flex items-center gap-1.5">
+            <Sparkles className="size-3.5 text-accent" /> 已參考 6 篇面試心得
+          </span>
         </div>
       </Parallax>
     </div>
