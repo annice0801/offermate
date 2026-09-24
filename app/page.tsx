@@ -7,7 +7,7 @@
  *
  * 區塊順序：
  *   Hero → 產業跑馬燈 → 關於我們（痛點 + 自我鏡像修正）→ 功能 → 診斷書展示
- *   → 運作方式 → FAQ → 聯絡我們 / 功能建議 → 結尾 CTA
+ *   → 運作方式 → 職涯專欄（最新 3 篇）→ FAQ → 聯絡我們 / 功能建議 → 結尾 CTA
  *
  * 響應式斷點（Tailwind 預設）：
  *   手機 < 640px（預設樣式）｜ sm ≥ 640 ｜ 平板 md ≥ 768 ｜ 電腦 lg ≥ 1024
@@ -18,6 +18,9 @@ import RadarChart from "@/components/radar-chart";
 import ContactForm from "@/components/contact-form";
 import { Parallax, Reveal, ScrollColor } from "@/components/parallax";
 import { COMPETENCIES } from "@/lib/types";
+import { POSTS } from "@/lib/posts";
+import PostCover from "@/components/blog/post-cover";
+import PostMeta from "@/components/blog/post-meta";
 
 /* ============================================================
  * 頁面資料：文案抽成陣列，JSX 只負責排版
@@ -324,6 +327,41 @@ export default function Home() {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ================= 職涯專欄：最新 3 篇 ================= */}
+      <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6 md:pt-24">
+        <Reveal className="flex flex-wrap items-end justify-between gap-4">
+          <SectionTitle eyebrow="Journal" title="職涯專欄" align="left" />
+          <div className="flex items-center gap-4">
+            <Link href="/blog#credits" className="text-xs text-muted hover:text-ink hover:underline">
+              圖片來源
+            </Link>
+            <Link href="/blog" className="text-sm font-medium text-accent hover:underline">
+              看全部文章 →
+            </Link>
+          </div>
+        </Reveal>
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[...POSTS]
+            .sort((a, b) => b.date.localeCompare(a.date))
+            .slice(0, 3)
+            .map((post, i) => (
+              // 平板 2 欄時隱藏第 3 篇，避免落單
+              <Reveal key={post.slug} delay={i * 100} className={i === 2 ? "sm:hidden lg:block" : ""}>
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className="glass group flex h-full flex-col overflow-hidden rounded-3xl transition hover:-translate-y-1 hover:bg-white/75"
+                >
+                  <PostCover post={post} />
+                  <div className="flex flex-1 flex-col p-6">
+                    <h3 className="flex-1 leading-snug font-semibold transition-colors group-hover:text-accent">{post.title}</h3>
+                    <PostMeta post={post} className="mt-4" />
+                  </div>
+                </Link>
+              </Reveal>
+            ))}
         </div>
       </section>
 

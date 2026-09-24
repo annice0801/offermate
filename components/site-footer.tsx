@@ -19,6 +19,7 @@ const COLUMNS = [
     title: "關於",
     links: [
       { href: "/#about", label: "關於我們" },
+      { href: "/blog", label: "職涯專欄" },
       { href: "/#faq", label: "常見問題" },
       { href: "/#contact", label: "功能建議回報" },
       { href: "/#contact", label: "聯絡我們" },

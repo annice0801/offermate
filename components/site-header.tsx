@@ -16,6 +16,7 @@ const NAV = [
   { href: "/#about", label: "關於我們" },
   { href: "/#features", label: "功能" },
   { href: "/#report", label: "診斷書" },
+  { href: "/blog", label: "職涯專欄" },
   { href: "/#faq", label: "常見問題" },
   { href: "/#contact", label: "聯絡我們" },
 ];
@@ -26,7 +27,7 @@ export default function SiteHeader() {
       <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Logo />
 
-        <nav className="hidden items-center gap-7 text-sm text-muted lg:flex">
+        <nav className="hidden items-center gap-6 text-sm text-muted lg:flex">
           {NAV.map((item) => (
             <Link key={item.href} href={item.href} className="transition-colors hover:text-ink">
               {item.label}
