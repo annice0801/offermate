@@ -12,10 +12,19 @@
  *   answer → 評分使用者回答 → 回傳回饋 + 下一題（最後一題固定是反問環節，答完 nextQuestion = null）
  *   report → 綜合整場表現 → 回傳「高管級面試戰力診斷書」
  *
- * 伺服器「不存」任何面試狀態（stateless），完整的對話紀錄由前端保存，
- * 每次請求都一併送上來。好處是不需要資料庫，也方便部署。
+ * 伺服器「不存」面試內容（stateless），完整的對話紀錄由前端保存，每次請求都一併送上來。
+ *
+ * 【使用紀錄】start / answer / report 每次都會在回應送出後（after）寫一筆 usageevents：
+ *   token 用量、估算成本、耗時、成功或錯誤訊息，給後台統計用；不存回答內容與金鑰。
+ *   前端用 X-Client-Id（匿名瀏覽器 ID）與 X-Session-Id（這場練習的 ID）標頭帶上身分。
+ *
+ * 【權限】停權的會員不能使用；後台開啟「需要登入」時，訪客不能開始新的面試。
  */
+import { after } from "next/server";
+import { getCurrentUser, getSessionUserId } from "@/lib/auth";
 import { MODEL, askJSON, describeOpenAIError, verifyApiKey } from "@/lib/openai";
+import { EMPTY_USAGE, getSettings, type TokenUsage } from "@/lib/settings";
+import { readTrackingHeaders, recordEvent } from "@/lib/usage";
 import {
   answerSchema,
   buildAnswerInput,
@@ -62,39 +71,97 @@ export async function POST(request: Request) {
     return Response.json({ error: "請求格式錯誤" }, { status: 400 });
   }
 
-  // 3) 依 action 分派
-  try {
-    if (body.action === "verify") {
+  // 3) 驗證金鑰不需要身分，也不記錄使用量
+  if (body.action === "verify") {
+    try {
       await verifyApiKey(apiKey);
       return Response.json({ ok: true, model: MODEL } satisfies VerifyResponse);
+    } catch (err) {
+      const { status, message } = describeOpenAIError(err);
+      return Response.json({ error: message }, { status });
     }
+  }
 
-    const setupError = validateSetup(body.setup);
-    if (setupError) return Response.json({ error: setupError }, { status: 400 });
+  const setupError = validateSetup(body.setup);
+  if (setupError) return Response.json({ error: setupError }, { status: 400 });
 
+  // 4) 身分與權限（資料庫連不上時當作訪客，不影響面試本身）
+  const sessionUserId = await getSessionUserId();
+  const user = sessionUserId ? await getCurrentUser().catch(() => null) : null;
+  if (sessionUserId && !user) {
+    // 有登入 Cookie 但查不到可用的帳號 → 已停權或帳號被刪除
+    return Response.json({ error: "你的帳號目前無法使用模擬面試，請重新登入或聯絡我們。" }, { status: 403 });
+  }
+  if (body.action === "start" && !user) {
+    const requireLogin = await getSettings()
+      .then((s) => s.requireLogin)
+      .catch(() => false);
+    if (requireLogin) return Response.json({ error: "請先登入（右上角「登入」）再開始模擬面試。" }, { status: 401 });
+  }
+
+  // 5) 依 action 分派，結束後記錄使用量
+  const startedAt = Date.now();
+  const meter: TokenUsage = { ...EMPTY_USAGE }; // 這次請求所有 OpenAI 呼叫的 token 加總
+  const meta: Record<string, unknown> = {
+    industry: body.setup.industry.slice(0, 50),
+    company: body.setup.company.slice(0, 50),
+    totalQuestions: body.setup.totalQuestions,
+  };
+  const log = (ok: boolean, httpStatus: number, errorMessage = "") =>
+    after(() =>
+      recordEvent({
+        type: `interview_${body.action}` as "interview_start" | "interview_answer" | "interview_report",
+        userId: user?.id,
+        ...readTrackingHeaders(request),
+        ok,
+        httpStatus,
+        errorMessage,
+        durationMs: Date.now() - startedAt,
+        model: MODEL,
+        usage: meter,
+        meta,
+      }),
+    );
+
+  try {
+    let result: StartResponse | AnswerResponse | ReportResponse;
     switch (body.action) {
       case "start":
-        return Response.json(await handleStart(apiKey, body.setup));
+        result = await handleStart(apiKey, body.setup, meter);
+        break;
       case "answer":
         if (!body.answer?.trim()) return Response.json({ error: "請先輸入回答" }, { status: 400 });
-        return Response.json(await handleAnswer(apiKey, body));
+        meta.questionNo = body.history.length + 1;
+        result = await handleAnswer(apiKey, body, meter);
+        meta.score = (result as AnswerResponse).feedback.score;
+        break;
       case "report":
-        return Response.json(await handleReport(apiKey, body));
+        result = await handleReport(apiKey, body, meter);
+        meta.overallScore = (result as ReportResponse).report.overallScore;
+        break;
       default:
         return Response.json({ error: "未知的 action" }, { status: 400 });
     }
+    log(true, 200);
+    return Response.json(result);
   } catch (err) {
     // 注意：只記錄錯誤訊息，絕不把 apiKey 印到 log
     const { status, message } = describeOpenAIError(err);
     console.error("[/api/interview]", status, err instanceof Error ? err.message : err);
+    log(false, status, err instanceof Error ? err.message : message);
     return Response.json({ error: message }, { status });
   }
+}
+
+/** 把一次 OpenAI 呼叫的用量累加到這次請求的總計 */
+function addUsage(meter: TokenUsage, u: TokenUsage) {
+  for (const k of Object.keys(meter) as (keyof TokenUsage)[]) meter[k] += u[k];
 }
 
 /* ------------------------------------------------------------
  * start：搜尋面經 + 面試官角色 + 第一題
  * ------------------------------------------------------------ */
-async function handleStart(apiKey: string, setup: InterviewSetup): Promise<StartResponse> {
+async function handleStart(apiKey: string, setup: InterviewSetup, meter: TokenUsage): Promise<StartResponse> {
   const params = {
     apiKey,
     instructions: buildPersona(), // 還沒有角色，由模型依產業 / 公司決定
@@ -116,6 +183,7 @@ async function handleStart(apiKey: string, setup: InterviewSetup): Promise<Start
     result.data.research.companyDataFound = false;
   }
 
+  addUsage(meter, result.usage);
   const { data, citations } = result;
 
   // 合併「模型自己列的來源」與「實際搜尋引用的網址」，並以網址去重複
@@ -139,6 +207,7 @@ async function handleStart(apiKey: string, setup: InterviewSetup): Promise<Start
 async function handleAnswer(
   apiKey: string,
   body: Extract<InterviewRequest, { action: "answer" }>,
+  meter: TokenUsage,
 ): Promise<AnswerResponse> {
   const { setup, interviewer, research, history, answer } = body;
   const currentNo = history.length + 1;
@@ -154,23 +223,25 @@ async function handleAnswer(
 
   // 最後一題（反問環節）：評估提問品質 + 面試官回答，不再出題
   if (isLast) {
-    const { data } = await askJSON<{ feedback: AnswerFeedback }>({
+    const { data, usage } = await askJSON<{ feedback: AnswerFeedback }>({
       apiKey,
       instructions,
       input,
       schemaName: "interview_reverse_answer",
       schema: reverseAnswerSchema,
     });
+    addUsage(meter, usage);
     return { feedback: clampFeedback(data.feedback), nextQuestion: null };
   }
 
-  const { data } = await askJSON<{ feedback: AnswerFeedback; nextQuestion: Question }>({
+  const { data, usage } = await askJSON<{ feedback: AnswerFeedback; nextQuestion: Question }>({
     apiKey,
     instructions,
     input,
     schemaName: "interview_answer",
     schema: answerSchema,
   });
+  addUsage(meter, usage);
 
   // 保險：就算模型沒遵守規則，伺服器端也強制修正題目類型
   //   - 輪到反問環節 → 一定是 reverse
@@ -192,19 +263,21 @@ async function handleAnswer(
 async function handleReport(
   apiKey: string,
   body: Extract<InterviewRequest, { action: "report" }>,
+  meter: TokenUsage,
 ): Promise<ReportResponse> {
   // 模型回傳的行動計畫是「第幾天」，這裡再換算成實際日期
   type RawReport = Omit<FinalReport, "actionPlan"> & {
     actionPlan: (Omit<ActionItem, "date"> & { dayOffset: number })[];
   };
 
-  const { data } = await askJSON<RawReport>({
+  const { data, usage } = await askJSON<RawReport>({
     apiKey,
     instructions: buildPersona(body.interviewer),
     input: buildReportInput(body.setup, body.research, body.history),
     schemaName: "interview_report",
     schema: reportSchema,
   });
+  addUsage(meter, usage);
 
   // 六大能力分數限制在 1~10
   const competencies = { ...data.competencies };

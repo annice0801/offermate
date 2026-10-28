@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
+import HideOnAdmin from "@/components/hide-on-admin";
 import "./globals.css";
 
 // next/font 會在建置時下載字體並自行託管，不會向 Google 發出額外請求
@@ -39,10 +40,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <div className="absolute top-1/3 -right-32 size-[560px] animate-float rounded-full bg-sky/45 blur-[120px] [animation-delay:-6s]" />
           <div className="absolute -bottom-40 left-1/3 size-[480px] animate-float rounded-full bg-lilac/40 blur-[120px] [animation-delay:-12s]" />
         </div>
-        <SiteHeader />
+        {/* 後台（/admin）有自己的側邊欄外框，不顯示全站 Header / Footer */}
+        <HideOnAdmin>
+          <SiteHeader />
+        </HideOnAdmin>
         {/* flex-1 讓主內容撐開，Footer 永遠貼在頁面底部 */}
         <main className="flex-1">{children}</main>
-        <SiteFooter />
+        <HideOnAdmin>
+          <SiteFooter />
+        </HideOnAdmin>
       </body>
     </html>
   );

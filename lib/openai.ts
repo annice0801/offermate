@@ -8,6 +8,7 @@
  * 金鑰只存在這次請求的記憶體中，用完即丟，不寫入任何地方、也不印到 log。
  */
 import OpenAI from "openai";
+import type { TokenUsage } from "@/lib/settings";
 
 // 使用的模型；可在 .env.local 用 OPENAI_MODEL 覆寫（這不是機密，只是設定）
 export const MODEL = process.env.OPENAI_MODEL || "gpt-5-mini";
@@ -39,7 +40,7 @@ interface AskOptions {
  *   若讓模型自由輸出文字，就得自己解析，容易出錯。
  *   設定 strict: true 後，模型保證輸出的 JSON 一定符合 schema。
  *
- * 回傳：解析後的物件 + 網路搜尋時引用到的網址（citations）
+ * 回傳：解析後的物件 + 網路搜尋時引用到的網址（citations）+ 這次的 token 用量（usage，給後台估算成本）
  */
 export async function askJSON<T>({
   apiKey,
@@ -48,7 +49,7 @@ export async function askJSON<T>({
   schemaName,
   schema,
   webSearch = false,
-}: AskOptions): Promise<{ data: T; citations: { title: string; url: string }[] }> {
+}: AskOptions): Promise<{ data: T; citations: { title: string; url: string }[]; usage: TokenUsage }> {
   const response = await createClient(apiKey).responses.create({
     model: MODEL,
     instructions,
@@ -75,7 +76,15 @@ export async function askJSON<T>({
     }
   }
 
-  return { data, citations };
+  const usage: TokenUsage = {
+    inputTokens: response.usage?.input_tokens ?? 0,
+    cachedInputTokens: response.usage?.input_tokens_details?.cached_tokens ?? 0,
+    outputTokens: response.usage?.output_tokens ?? 0,
+    reasoningTokens: response.usage?.output_tokens_details?.reasoning_tokens ?? 0,
+    webSearchCalls: response.output.filter((item) => item.type === "web_search_call").length,
+  };
+
+  return { data, citations, usage };
 }
 
 /**

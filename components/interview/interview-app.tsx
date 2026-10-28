@@ -10,6 +10,8 @@
  *
  * 所有面試資料（面試官角色、情報、題目、回答、回饋）都存在這裡的 state，
  * 每次呼叫 API 時把需要的資料一起送出（因為後端不保存狀態）。
+ *
+ * 每場面試開始時產生一個 sessionId，之後的請求都帶著它，後台才能算出「一場練習用了多久、有沒有完成」。
  */
 "use client";
 
@@ -27,6 +29,7 @@ import type {
   Turn,
 } from "@/lib/types";
 import { API_KEY_HEADER, getApiKey, openApiKeySettings } from "@/lib/api-key";
+import { newSessionId, track, trackingHeaders } from "@/lib/tracking-client";
 import SetupForm from "./setup-form";
 import SessionView from "./session-view";
 import ReportView from "./report-view";
@@ -35,26 +38,29 @@ type Stage = "setup" | "interview" | "report";
 /** 目前正在等待哪一種 API 回應；null 表示閒置 */
 export type Loading = null | "start" | "answer" | "report";
 
+/** 後端回傳的錯誤（後端已經記錄過，前端不用再回報） */
+class ApiError extends Error {}
+
 /**
  * 呼叫後端 /api/interview 的小工具
  * - BYOK：從 localStorage 取出使用者的 OpenAI 金鑰，放在 X-OpenAI-Key 標頭帶給後端
  * - 後端出錯時會回傳 { error }，這裡統一轉成 throw，讓呼叫端用 try/catch 處理
  */
-async function callInterviewApi<T>(body: InterviewRequest): Promise<T> {
+async function callInterviewApi<T>(body: InterviewRequest, sessionId: string | null): Promise<T> {
   const apiKey = getApiKey();
   if (!apiKey) {
     openApiKeySettings(); // 沒有金鑰就直接打開設定視窗
-    throw new Error("請先設定你的 OpenAI API Key。");
+    throw new ApiError("請先設定你的 OpenAI API Key。");
   }
 
   const res = await fetch("/api/interview", {
     method: "POST",
-    headers: { "Content-Type": "application/json", [API_KEY_HEADER]: apiKey },
+    headers: { "Content-Type": "application/json", [API_KEY_HEADER]: apiKey, ...trackingHeaders(sessionId) },
     body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => ({ error: "伺服器回應格式錯誤" }));
   if (res.status === 401) openApiKeySettings(); // 金鑰無效 → 引導使用者重新設定
-  if (!res.ok) throw new Error(json.error ?? `請求失敗（${res.status}）`);
+  if (!res.ok) throw new ApiError(json.error ?? `請求失敗（${res.status}）`);
   return json as T;
 }
 
@@ -70,6 +76,10 @@ export default function InterviewApp() {
   const [loading, setLoading] = useState<Loading>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 目前這場面試的 ID：ref 給非同步流程讀最新值，state 給畫面（render 時不能讀 ref）
+  const sessionIdRef = useRef<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
   // 記住「上一次失敗的動作」，讓使用者按「重試」時可以再執行一次
   const retryRef = useRef<(() => void) | null>(null);
 
@@ -82,6 +92,13 @@ export default function InterviewApp() {
       retryRef.current = null;
     } catch (err) {
       setError(err instanceof Error ? err.message : "發生未知錯誤");
+      // 網路斷線、回應解析失敗這類「後端不知道」的錯誤，回報給後台
+      if (!(err instanceof ApiError)) {
+        track("client_error", sessionIdRef.current, {
+          message: err instanceof Error ? err.message : String(err),
+          meta: { where: kind },
+        });
+      }
       retryRef.current = () => run(kind, task);
     } finally {
       setLoading(null);
@@ -91,8 +108,10 @@ export default function InterviewApp() {
   /* ---------- 階段 1 → 2：開始面試 ---------- */
   function startInterview(s: InterviewSetup) {
     setSetup(s);
+    sessionIdRef.current = newSessionId();
+    setSessionId(sessionIdRef.current);
     run("start", async () => {
-      const data = await callInterviewApi<StartResponse>({ action: "start", setup: s });
+      const data = await callInterviewApi<StartResponse>({ action: "start", setup: s }, sessionIdRef.current);
       setInterviewer(data.interviewer);
       setResearch(data.research);
       setCurrentQuestion(data.question);
@@ -116,7 +135,7 @@ export default function InterviewApp() {
         history,
         currentQuestion,
         answer,
-      });
+      }, sessionIdRef.current);
 
       // 把這一輪（題目 + 回答 + 回饋）加入紀錄
       const newHistory = [...history, { question: currentQuestion, answer, feedback: data.feedback }];
@@ -142,7 +161,7 @@ export default function InterviewApp() {
         interviewer,
         research,
         history: finalHistory,
-      });
+      }, sessionIdRef.current);
       setReport(data.report);
       setStage("report");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -193,7 +212,16 @@ export default function InterviewApp() {
   }
 
   if (stage === "report" && setup && interviewer && report) {
-    return <ReportView setup={setup} interviewer={interviewer} report={report} history={history} onRestart={restart} />;
+    return (
+      <ReportView
+        setup={setup}
+        interviewer={interviewer}
+        report={report}
+        history={history}
+        sessionId={sessionId}
+        onRestart={restart}
+      />
+    );
   }
 
   return null;

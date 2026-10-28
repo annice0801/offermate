@@ -13,6 +13,7 @@
  * 存檔方式：
  *   - 下載 PDF：呼叫瀏覽器列印，globals.css 的 @media print 只印出 #diagnosis-report
  *   - 下載 PNG：用 html-to-image 把診斷書 DOM 轉成圖片後下載
+ *   每次下載都會回報給後台（track），統計有多少人下載診斷書。
  */
 "use client";
 
@@ -22,12 +23,14 @@ import { toPng } from "html-to-image";
 import { COMPETENCIES, type FinalReport, type Interviewer, type InterviewSetup, type Turn } from "@/lib/types";
 import FeedbackCard, { scoreTone } from "./feedback-card";
 import RadarChart from "@/components/radar-chart";
+import { track } from "@/lib/tracking-client";
 
 interface Props {
   setup: InterviewSetup;
   interviewer: Interviewer;
   report: FinalReport;
   history: Turn[];
+  sessionId: string | null; // 這場練習的 ID，回報下載事件用
   onRestart: () => void;
 }
 
@@ -46,7 +49,7 @@ function today() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export default function ReportView({ setup, interviewer, report, history, onRestart }: Props) {
+export default function ReportView({ setup, interviewer, report, history, sessionId, onRestart }: Props) {
   const reportRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
   // 診斷書編號與日期：只在第一次渲染時產生（useState 的初始化函式只執行一次）
@@ -72,8 +75,10 @@ export default function ReportView({ setup, interviewer, report, history, onRest
       a.href = dataUrl;
       a.download = `${fileBase}.png`;
       a.click();
+      track("download_png", sessionId, { meta: { company: setup.company } });
     } catch (err) {
       console.error(err);
+      track("client_error", sessionId, { message: `PNG 匯出失敗：${err instanceof Error ? err.message : String(err)}`, meta: { where: "downloadPng" } });
       alert("圖片產生失敗，請改用「下載 PDF」。");
     } finally {
       setSaving(false);
@@ -84,6 +89,7 @@ export default function ReportView({ setup, interviewer, report, history, onRest
   function downloadPdf() {
     const original = document.title;
     document.title = fileBase;
+    track("download_pdf", sessionId, { meta: { company: setup.company } });
     window.print();
     document.title = original;
   }

@@ -11,6 +11,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Logo from "./logo";
 import ApiKeySettings from "./api-key-settings";
+import AuthMenu from "./auth-menu";
 import MobileNav from "./mobile-nav";
 
 const NAV = [
@@ -39,6 +40,8 @@ export default function SiteHeader() {
         <div className="flex items-center gap-2">
           {/* BYOK：使用者自己的 OpenAI 金鑰設定（Client Component） */}
           <ApiKeySettings />
+          {/* 會員狀態：未登入顯示「登入」，已登入顯示頭像選單（Client Component） */}
+          <AuthMenu />
           <Link
             href="/interview"
             className="group inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-accent"
