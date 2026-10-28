@@ -9,6 +9,7 @@
  *   5xx       → 伺服器或 OpenAI 服務問題，需要處理
  *   前端錯誤  → 網路中斷、PNG 匯出失敗等瀏覽器端問題
  */
+import { connection } from "next/server";
 import Link from "next/link";
 import { EVENT_LABELS, EmptyState, PageHeader } from "@/components/admin/ui";
 import { getErrorGroups } from "@/lib/admin-stats";
@@ -24,6 +25,7 @@ function classify(type: string, status: number | null) {
 }
 
 export default async function AdminErrorsPage({ searchParams }: PageProps<"/admin/errors">) {
+  await connection(); // 只在真正有請求時執行（見 app/admin/layout.tsx）
   const { days: daysParam } = await searchParams;
   const days = RANGES.includes(Number(daysParam)) ? Number(daysParam) : 30;
   const groups = await getErrorGroups(days);

@@ -7,9 +7,11 @@
  *   未登入 → { user: null }（回 200，未登入是正常狀態不是錯誤）
  * 帳號被刪除或停權時，getCurrentUser() 也會回傳 null，一樣視為未登入。
  */
+import { connection } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
+  await connection(); // 每個請求的登入者不同，不能在建置時預先產生
   try {
     return Response.json({ user: await getCurrentUser() });
   } catch (err) {

@@ -5,6 +5,7 @@
  * 篩選表單是一般的 GET 表單，不需要 JavaScript 也能用。
  * 「匯出 CSV」會帶上同樣的篩選條件。
  */
+import { connection } from "next/server";
 import { Download } from "lucide-react";
 import Link from "next/link";
 import { Avatar, EmptyState, PageHeader, PlanBadge, RoleBadge, StatusBadge } from "@/components/admin/ui";
@@ -21,6 +22,7 @@ const SORTS = [
 ];
 
 export default async function AdminUsersPage({ searchParams }: PageProps<"/admin/users">) {
+  await connection(); // 只在真正有請求時執行（見 app/admin/layout.tsx）
   const sp = await searchParams;
   const one = (v: string | string[] | undefined) => (typeof v === "string" && v ? v : undefined);
   const filter = { q: one(sp.q), role: one(sp.role), plan: one(sp.plan), status: one(sp.status), sort: one(sp.sort) };

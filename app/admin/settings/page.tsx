@@ -3,6 +3,7 @@
  * ------------------------------------------------------------
  * 伺服器讀出目前設定，交給 <SettingsForm /> 編輯；support 只能看不能存。
  */
+import { connection } from "next/server";
 import SettingsForm from "@/components/admin/settings-form";
 import { PageHeader } from "@/components/admin/ui";
 import { getCurrentUser } from "@/lib/auth";
@@ -11,6 +12,7 @@ import { canEditAdmin } from "@/lib/roles";
 import { getSettings } from "@/lib/settings";
 
 export default async function AdminSettingsPage() {
+  await connection(); // 只在真正有請求時執行（見 app/admin/layout.tsx）
   const [settings, me] = await Promise.all([getSettings(), getCurrentUser()]);
 
   return (

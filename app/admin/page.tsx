@@ -10,6 +10,7 @@
  * 成本說明：目前是 BYOK（使用者用自己的 OpenAI 金鑰），費用由使用者負擔；
  * 這裡的成本是「使用者實際花在 OpenAI 的估算金額」，可以拿來評估之後改成平台付費時的定價。
  */
+import { connection } from "next/server";
 import { AlertTriangle, Coins, Download, Info, MessagesSquare, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import BarChart from "@/components/admin/bar-chart";
@@ -28,6 +29,7 @@ const RANGES = [7, 30, 90];
 const PLAN_COLORS: Record<Plan, string> = { free: "#2a78d6", pro: "#eb6834", enterprise: "#1baf7a" };
 
 export default async function AdminOverviewPage({ searchParams }: PageProps<"/admin">) {
+  await connection(); // 只在真正有請求時執行（見 app/admin/layout.tsx）
   const { days: daysParam } = await searchParams;
   const days = RANGES.includes(Number(daysParam)) ? Number(daysParam) : 30;
   const [o, settings] = await Promise.all([getOverview(days), getSettings()]);

@@ -9,6 +9,7 @@
  * 版面：左側白色側邊欄（Logo、導覽、目前登入者）＋ 右側內容區；
  * 全站 Header / Footer 在 /admin 底下會隱藏（見 components/hide-on-admin.tsx）。
  */
+import { connection } from "next/server";
 import { ArrowUpRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -25,6 +26,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
+  // 後台每次都要依「目前登入者」即時產生，不能在建置時預先產生成靜態頁
+  await connection();
   const user = await getCurrentUser().catch(() => null);
   if (!user || !canViewAdmin(user.role)) notFound();
 

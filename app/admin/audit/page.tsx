@@ -4,6 +4,7 @@
  * 後台的每一次修改（會員等級、權限、停權、備註、系統設定）都會留下紀錄，
  * 之後有多位管理員時，可以查到是誰在什麼時候改了什麼。
  */
+import { connection } from "next/server";
 import Link from "next/link";
 import { EmptyState, PageHeader } from "@/components/admin/ui";
 import { getAdminLogs } from "@/lib/admin-stats";
@@ -32,6 +33,7 @@ function show(field: string, v: unknown) {
 }
 
 export default async function AdminAuditPage() {
+  await connection(); // 只在真正有請求時執行（見 app/admin/layout.tsx）
   const logs = await getAdminLogs(200);
 
   return (

@@ -6,6 +6,7 @@
  *   中：總分變化（看練習有沒有進步）
  *   下：每一場練習、最近 50 筆事件、這位會員被修改過的紀錄
  */
+import { connection } from "next/server";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -27,6 +28,7 @@ function describeValue(field: string, v: unknown) {
 }
 
 export default async function AdminUserDetailPage({ params }: PageProps<"/admin/users/[id]">) {
+  await connection(); // 只在真正有請求時執行（見 app/admin/layout.tsx）
   const { id } = await params;
   const [detail, me, settings] = await Promise.all([getUserDetail(id), getCurrentUser(), getSettings()]);
   if (!detail || !me) notFound();
