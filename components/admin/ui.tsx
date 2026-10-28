@@ -8,10 +8,10 @@ import { PLAN_LABELS, ROLE_LABELS, STATUS_LABELS, type Plan, type Role, type Use
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+        <h1 className="text-xl font-semibold">{title}</h1>
+        {description && <p className="text-xs text-muted">{description}</p>}
       </div>
       {actions}
     </div>
@@ -22,9 +22,9 @@ export const CARD = "admin-card rounded-2xl"; // admin-card 定義在 globals.cs
 
 export function Panel({ title, children, className = "", actions }: { title?: string; children: ReactNode; className?: string; actions?: ReactNode }) {
   return (
-    <section className={`${CARD} min-w-0 p-5 ${className}`}>
+    <section className={`${CARD} min-w-0 p-4 ${className}`}>
       {(title || actions) && (
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
           {title && <h2 className="text-sm font-semibold">{title}</h2>}
           {actions}
         </div>
@@ -37,9 +37,9 @@ export function Panel({ title, children, className = "", actions }: { title?: st
 /** 單一數字的指標卡：大數字 + 標籤 + 補充說明 */
 export function StatTile({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: "bad" | "warn" }) {
   return (
-    <div className={`${CARD} p-4`}>
+    <div className={`${CARD} px-4 py-3`}>
       <p className="text-xs text-muted">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold tabular-nums ${tone === "bad" ? "text-bad" : tone === "warn" ? "text-warn" : ""}`}>{value}</p>
+      <p className={`mt-0.5 text-xl font-semibold tabular-nums ${tone === "bad" ? "text-bad" : tone === "warn" ? "text-warn" : ""}`}>{value}</p>
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </div>
   );
@@ -72,15 +72,14 @@ export function KpiCard({
   const flat = change === 0 || change === undefined;
   const good = flat ? null : up === goodWhenUp;
   return (
-    <div className={`${CARD} p-4`}>
-      <div className="flex items-center gap-2">
-        <span className="grid size-8 place-items-center rounded-xl bg-accent-soft text-accent">
-          <Icon className="size-4" />
-        </span>
-        <span className="text-sm text-muted">{label}</span>
-      </div>
-      <p className="mt-3 text-[1.7rem] leading-none font-semibold tabular-nums">{value}</p>
-      <p className="mt-2 flex flex-wrap items-center gap-x-2 text-xs">
+    <div className={`${CARD} flex items-center gap-3 px-4 py-3`}>
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+        <Icon className="size-5" />
+      </span>
+      <div className="min-w-0">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="mt-0.5 text-xl leading-tight font-semibold tabular-nums">{value}</p>
+      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs">
         {change === null ? (
           <span className="text-muted">上一期無資料</span>
         ) : flat ? (
@@ -92,6 +91,7 @@ export function KpiCard({
         )}
         {hint && <span className="text-muted">{hint}</span>}
       </p>
+      </div>
     </div>
   );
 }

@@ -84,7 +84,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
             <tbody>
               {rows.map((u) => (
                 <tr key={u.id} className="border-b border-ink/5 transition last:border-0 hover:bg-white/50">
-                  <td className="px-4 py-2.5">
+                  <td className="px-3 py-2">
                     <Link href={`/admin/users/${u.id}`} className="flex items-center gap-3">
                       <Avatar src={u.picture} name={u.name || u.email} />
                       <span className="min-w-0">
@@ -93,25 +93,25 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
                       </span>
                     </Link>
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1">
                       <PlanBadge plan={u.plan} />
                       {u.role !== "user" && <RoleBadge role={u.role} />}
                     </div>
                   </td>
-                  <td className="px-3 py-2.5"><StatusBadge status={u.status} /></td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">
+                  <td className="px-3 py-2"><StatusBadge status={u.status} /></td>
+                  <td className="px-3 py-2 text-right tabular-nums">
                     {u.sessions}
                     <span className="text-xs text-muted">（{u.completed}）</span>
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{u.usageMs ? formatDuration(u.usageMs) : "—"}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{u.downloads}</td>
-                  <td className={`px-3 py-2.5 text-right tabular-nums ${u.errors ? "font-medium text-bad" : ""}`}>{u.errors}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">
+                  <td className="px-3 py-2 text-right tabular-nums">{u.usageMs ? formatDuration(u.usageMs) : "—"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{u.downloads}</td>
+                  <td className={`px-3 py-2 text-right tabular-nums ${u.errors ? "font-medium text-bad" : ""}`}>{u.errors}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
                     {formatTokens(u.tokens)}
                     <span className="block text-xs text-muted">{formatUsd(u.costUsd)}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-muted">
+                  <td className="px-3 py-2 text-xs text-muted">
                     {formatRelative(u.lastSeenAt ?? u.lastLoginAt)}
                     <span className="block">註冊 {formatDate(u.createdAt)}</span>
                   </td>

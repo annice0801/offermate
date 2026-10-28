@@ -16,8 +16,8 @@ export interface DonutSlice {
   color: string;
 }
 
-const SIZE = 148;
-const STROKE = 18;
+const SIZE = 112;
+const STROKE = 14;
 const R = (SIZE - STROKE) / 2;
 const C = 2 * Math.PI * R;
 const GAP = 2; // 色塊間隙（px）
@@ -39,7 +39,7 @@ export default function DonutChart({ slices, centerLabel }: { slices: DonutSlice
   }));
 
   return (
-    <div className="flex flex-wrap items-center gap-5">
+    <div className="flex flex-wrap items-center gap-4">
       <div className="relative shrink-0" style={{ width: SIZE, height: SIZE }}>
         <svg width={SIZE} height={SIZE} className="-rotate-90" role="img" aria-label={slices.map((s) => `${s.label} ${s.value}（${pct(s.value)}）`).join("、")}>
           <circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke="var(--color-paper)" strokeWidth={STROKE} />
@@ -63,13 +63,13 @@ export default function DonutChart({ slices, centerLabel }: { slices: DonutSlice
         </svg>
         <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
           <div>
-            <p className="text-2xl font-semibold tabular-nums">{focus ? focus.value : total}</p>
+            <p className="text-xl font-semibold tabular-nums">{focus ? focus.value : total}</p>
             <p className="text-[11px] text-muted">{focus ? `${focus.label}・${pct(focus.value)}` : centerLabel}</p>
           </div>
         </div>
       </div>
 
-      <ul className="min-w-36 flex-1 space-y-2 text-sm">
+      <ul className="min-w-32 flex-1 space-y-1 text-sm">
         {slices.map((s) => (
           <li
             key={s.key}

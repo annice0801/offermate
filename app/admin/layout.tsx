@@ -32,14 +32,14 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   if (!user || !canViewAdmin(user.role)) notFound();
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[1440px] flex-col gap-4 p-3 sm:p-4 lg:flex-row">
-      <aside className="admin-card shrink-0 rounded-3xl p-4 lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-60 lg:flex-col">
+    <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-3 p-2 sm:p-3 lg:flex-row">
+      <aside className="admin-card shrink-0 rounded-2xl p-3 lg:sticky lg:top-3 lg:flex lg:h-[calc(100vh-1.5rem)] lg:w-48 lg:flex-col">
         <div className="flex items-center justify-between gap-3 lg:block">
           <Logo />
           <p className="font-mono text-[10px] tracking-widest text-muted lg:mt-1 lg:pl-10">ADMIN CONSOLE</p>
         </div>
 
-        <div className="mt-4 lg:mt-8">
+        <div className="mt-3 lg:mt-6">
           <AdminNav />
         </div>
 
@@ -58,7 +58,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1 py-2 lg:px-2">{children}</div>
+      <div className="min-w-0 flex-1 py-1">{children}</div>
     </div>
   );
 }

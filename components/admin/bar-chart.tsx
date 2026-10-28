@@ -28,7 +28,8 @@ export default function BarChart({ data, unit, tickEvery = 1, height = 120 }: Pr
 
   return (
     <figure>
-      <div className="relative">
+      {/* pt-4：留空間給最高那一欄頂端的數值標籤 */}
+      <div className="relative pt-4">
         <div className="flex items-end gap-[2px] border-b border-ink/15" style={{ height }} onMouseLeave={() => setHover(null)}>
           {data.map((d, i) => (
             <div

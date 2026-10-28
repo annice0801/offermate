@@ -27,7 +27,7 @@ const METRICS = [
 ] as const;
 type MetricKey = (typeof METRICS)[number]["key"];
 
-const H = 240;
+const H = 190;
 const PAD = { top: 16, right: 12, bottom: 26, left: 48 };
 
 /** 讓 Y 軸最大值落在好讀的整數上：1、2、5 × 10ⁿ */
@@ -110,7 +110,7 @@ export default function TrendChart({ data }: { data: TrendPoint[] }) {
 
   return (
     <figure>
-      <figcaption className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <figcaption className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold">使用趨勢</p>
           <p className="text-xs text-muted tabular-nums">
@@ -199,7 +199,8 @@ export default function TrendChart({ data }: { data: TrendPoint[] }) {
                   key={d.date}
                   x={x(i)}
                   y={H - 6}
-                  textAnchor="middle"
+                  // 頭尾兩個標籤往內對齊，才不會超出圖表被切掉
+                  textAnchor={i === 0 ? "start" : i === data.length - 1 ? "end" : "middle"}
                   className="fill-muted text-[10px] tabular-nums"
                 >
                   {short(d.date)}

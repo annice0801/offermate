@@ -54,13 +54,13 @@ export default async function AdminAuditPage() {
             <tbody>
               {logs.map((l) => (
                 <tr key={l.id} className="border-b border-ink/5 align-top last:border-0">
-                  <td className="px-4 py-2.5 text-xs whitespace-nowrap text-muted">{formatDateTime(l.createdAt)}</td>
-                  <td className="px-3 py-2.5 text-xs">{l.actorEmail}</td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">{ACTION_LABELS[l.action] ?? l.action}</td>
-                  <td className="px-3 py-2.5 text-xs">
+                  <td className="px-3 py-2 text-xs whitespace-nowrap text-muted">{formatDateTime(l.createdAt)}</td>
+                  <td className="px-3 py-2 text-xs">{l.actorEmail}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{ACTION_LABELS[l.action] ?? l.action}</td>
+                  <td className="px-3 py-2 text-xs">
                     {l.targetId ? <Link href={`/admin/users/${l.targetId}`} className="text-accent hover:underline">{l.targetEmail}</Link> : "—"}
                   </td>
-                  <td className="px-4 py-2.5 text-xs">
+                  <td className="px-3 py-2 text-xs">
                     {Object.entries(l.changes).map(([field, c]) => (
                       <p key={field}>
                         {FIELD_LABELS[field] ?? field}：<span className="text-muted line-through">{show(field, c.from)}</span> → <span className="font-medium">{show(field, c.to)}</span>

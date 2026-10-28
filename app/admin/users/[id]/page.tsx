@@ -45,7 +45,7 @@ export default async function AdminUserDetailPage({ params }: PageProps<"/admin/
         會員列表
       </Link>
 
-      <div className="admin-card mb-4 flex flex-wrap items-center gap-4 rounded-2xl p-5">
+      <div className="admin-card mb-4 flex flex-wrap items-center gap-4 rounded-2xl p-4">
         <Avatar src={user.picture} name={user.name || user.email} size={12} />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-xl font-semibold">{user.name || "（未命名）"}</h1>

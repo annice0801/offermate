@@ -27,7 +27,7 @@ export default function AdminNav() {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition ${
+            className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition ${
               active ? "bg-ink font-medium text-white shadow-sm" : "text-muted hover:bg-paper hover:text-ink"
             }`}
           >
