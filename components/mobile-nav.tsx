@@ -6,7 +6,7 @@
  */
 "use client";
 
-import { Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -56,6 +56,15 @@ export default function MobileNav({ items }: { items: { href: string; label: str
               </li>
             ))}
           </ul>
+          {/* 手機版頁首放不下「開始模擬面試」，放在選單最下方 */}
+          <Link
+            href="/interview"
+            onClick={() => setOpen(false)}
+            className="mt-2 flex items-center justify-center gap-1.5 rounded-2xl bg-ink px-4 py-3 font-medium text-paper transition hover:bg-accent sm:hidden"
+          >
+            開始模擬面試
+            <ArrowRight className="size-4" />
+          </Link>
         </nav>
       )}
     </div>

@@ -4,7 +4,8 @@
  * sticky + 毛玻璃背景（半透明白 + backdrop-blur），捲動時固定在上方。
  * 響應式：
  *   電腦（lg 以上） → Logo ｜ 導覽連結 ｜ API Key + 開始面試
- *   手機 / 平板     → Logo ｜ API Key + 開始 + 漢堡選單
+ *   平板            → Logo ｜ API Key + 開始 + 漢堡選單
+ *   手機（sm 以下） → Logo ｜ API Key + 漢堡選單；寬度放不下「開始」，改放在選單最下方
  * 導覽連結使用 /#about 這種寫法，在 /interview 頁點擊也能跳回首頁對應區塊。
  */
 import { ArrowRight } from "lucide-react";
@@ -37,17 +38,16 @@ export default function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
           {/* BYOK：使用者自己的 OpenAI 金鑰設定（Client Component） */}
           <ApiKeySettings />
           {/* 會員狀態：未登入顯示「登入」，已登入顯示頭像選單（Client Component） */}
           <AuthMenu />
           <Link
             href="/interview"
-            className="group inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-accent"
+            className="group hidden items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-accent sm:inline-flex"
           >
-            <span className="hidden sm:inline">開始模擬面試</span>
-            <span className="sm:hidden">開始</span>
+            開始模擬面試
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <MobileNav items={NAV} />
