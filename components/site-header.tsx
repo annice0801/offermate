@@ -27,7 +27,7 @@ const NAV = [
 export default function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/70 bg-white/45 backdrop-blur-xl backdrop-saturate-150 print:hidden">
-      <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-3 min-[360px]:px-4 sm:gap-3 sm:px-6">
         <Logo />
 
         <nav className="hidden items-center gap-6 text-sm text-muted lg:flex">
@@ -38,7 +38,7 @@ export default function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
+        <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2">
           {/* BYOK：使用者自己的 OpenAI 金鑰設定（Client Component） */}
           <ApiKeySettings />
           {/* 會員狀態：未登入顯示「登入」，已登入顯示頭像選單（Client Component） */}

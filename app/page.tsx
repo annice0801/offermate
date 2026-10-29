@@ -122,15 +122,18 @@ export default function Home() {
               <span className="size-1.5 animate-pulse rounded-full bg-accent-bright" />
               OfferMate · AI Interview Clinic
             </p>
-            <h1 className="text-[2.5rem] leading-[1.15] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+            <h1 className="text-[clamp(1.75rem,9vw,2.5rem)] leading-[1.15] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
               下一場面試，
               <br />
-              先來這裡
-              {/* 「健檢」：不用斜體，以捲動驅動的漸層流動做出色彩視差 */}
-              <ScrollColor className="mx-1 font-bold">健檢</ScrollColor>
-              一次。
+              {/* 第二行不拆開；手機字級隨螢幕寬度縮小，讓整行放得下 */}
+              <span className="whitespace-nowrap">
+                先來這裡
+                {/* 「健檢」：不用斜體，以捲動驅動的漸層流動做出色彩視差 */}
+                <ScrollColor className="mx-1 font-bold">健檢</ScrollColor>
+                一次。
+              </span>
             </h1>
-            <p className="mt-6 text-lg font-medium tracking-wide text-ink/80 sm:text-xl">{SLOGAN}</p>
+            <p className="mt-6 text-lg font-medium tracking-wide text-balance text-ink/80 sm:text-xl">{SLOGAN}</p>
             <p className="mx-auto mt-4 max-w-lg leading-relaxed text-muted lg:mx-0">
               輸入產業、公司與職缺，專屬 AI 面試官會搜尋真實面經，出題、追問、進行反問環節，最後開出一份
               <strong className="font-semibold text-ink">高管級面試戰力診斷書</strong>。

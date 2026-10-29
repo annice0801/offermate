@@ -21,7 +21,7 @@ export default function ApiKeySettings() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full bg-white/60 px-3 py-2 text-sm text-muted transition hover:bg-white hover:text-ink"
+        className="inline-flex items-center gap-2 rounded-full bg-white/60 px-2.5 py-2 text-sm text-muted sm:px-3 transition hover:bg-white hover:text-ink"
         aria-label="API Key 設定"
       >
         <span className={`size-2 rounded-full ${apiKey ? "bg-good" : "animate-pulse bg-warn"}`} />
