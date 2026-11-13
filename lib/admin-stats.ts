@@ -22,7 +22,7 @@ import type { Plan, Role, UserStatus } from "@/lib/roles";
 
 const TZ = "Asia/Taipei";
 const DAY = 24 * 60 * 60 * 1000;
-const AI_TYPES = ["interview_start", "interview_answer", "interview_report"];
+const AI_TYPES = ["interview_analyze", "interview_start", "interview_answer", "interview_report"];
 
 /* ------------------------------------------------------------
  * 共用：把事件依 sessionId 整理成「一場一筆」

@@ -14,13 +14,15 @@
  *   - 下載 PDF：呼叫瀏覽器列印，globals.css 的 @media print 只印出 #diagnosis-report
  *   - 下載 PNG：用 html-to-image 把診斷書 DOM 轉成圖片後下載
  *   每次下載都會回報給後台（track），統計有多少人下載診斷書。
+ *
+ * 分關面試：工具列下方顯示「這一關是否通過」與闖關進度，可以進入下一關或重練這一關。
  */
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown, RotateCcw } from "lucide-react";
 import { useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import { COMPETENCIES, type FinalReport, type Interviewer, type InterviewSetup, type Turn } from "@/lib/types";
+import { COMPETENCIES, STAGES, getStage, type FinalReport, type Interviewer, type InterviewSetup, type Turn } from "@/lib/types";
 import FeedbackCard, { scoreTone } from "./feedback-card";
 import RadarChart from "@/components/radar-chart";
 import { track } from "@/lib/tracking-client";
@@ -32,6 +34,8 @@ interface Props {
   history: Turn[];
   sessionId: string | null; // 這場練習的 ID，回報下載事件用
   onRestart: () => void;
+  onNextStage: () => void; // 進入下一關（第三關沒有下一關，不會顯示按鈕）
+  onRetryStage: () => void; // 同一關再練一次
 }
 
 // 錄取建議對應的顏色
@@ -49,7 +53,7 @@ function today() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export default function ReportView({ setup, interviewer, report, history, sessionId, onRestart }: Props) {
+export default function ReportView({ setup, interviewer, report, history, sessionId, onRestart, onNextStage, onRetryStage }: Props) {
   const reportRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
   // 診斷書編號與日期：只在第一次渲染時產生（useState 的初始化函式只執行一次）
@@ -115,6 +119,8 @@ export default function ReportView({ setup, interviewer, report, history, sessio
           </button>
         </div>
       </div>
+
+      {getStage(setup.stage) && <StageResult setup={setup} report={report} onNextStage={onNextStage} onRetryStage={onRetryStage} />}
 
       {/* ================= 診斷書本體（這個 id 會被列印樣式與 PNG 匯出使用） ================= */}
       <article id="diagnosis-report" ref={reportRef} className="glass-strong animate-rise overflow-hidden rounded-[2rem]">
@@ -368,5 +374,101 @@ function ListCard({ title, items, marker, tone }: { title: string; items: string
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * 分關面試的結果：闖關進度（第 1 → 2 → 3 關）、這關通過與否、留給下一關的重點、下一步按鈕
+ * 列印與匯出 PNG 時不顯示（在 #diagnosis-report 之外，且 print:hidden）。
+ */
+function StageResult({
+  setup,
+  report,
+  onNextStage,
+  onRetryStage,
+}: {
+  setup: InterviewSetup;
+  report: FinalReport;
+  onNextStage: () => void;
+  onRetryStage: () => void;
+}) {
+  const current = getStage(setup.stage)!;
+  const next = getStage((current.no + 1) as 2 | 3);
+  const passed = report.stagePassed ?? false;
+  // 每一關的狀態：前幾關看紀錄、這一關看本次結果、之後的關卡還沒開始
+  const statusOf = (no: number) => {
+    if (no === current.no) return passed ? "passed" : "failed";
+    const prev = setup.previousRounds?.find((r) => r.stage === no);
+    if (prev) return prev.passed ? "passed" : "failed";
+    return "todo";
+  };
+
+  return (
+    <section className={`mb-6 rounded-3xl p-5 print:hidden sm:p-6 ${passed ? "bg-good-soft" : "bg-warn-soft"}`}>
+      {/* 闖關進度 */}
+      <ol className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+        {STAGES.map((st, i) => {
+          const status = statusOf(st.no);
+          return (
+            <li key={st.no} className="flex items-center gap-2">
+              {i > 0 && <span className="h-px w-4 bg-ink/20 sm:w-8" />}
+              <span
+                className={`rounded-full px-2.5 py-1 font-medium ${
+                  status === "passed" ? "bg-good text-white" : status === "failed" ? "bg-warn text-white" : "bg-white/70 text-muted"
+                } ${st.no === current.no ? "ring-2 ring-ink/20 ring-offset-1" : ""}`}
+              >
+                {status === "passed" ? "✓ " : status === "failed" ? "✕ " : ""}第 {st.no} 關・{st.name}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <h2 className={`text-xl font-semibold ${passed ? "text-good" : "text-warn"}`}>
+        {passed
+          ? next
+            ? `通過第 ${current.no} 關！可以進入第 ${next.no} 關：${next.name}`
+            : "恭喜通過三關面試！"
+          : `第 ${current.no} 關未通過`}
+      </h2>
+      {report.stageVerdict && <p className="mt-1.5 text-sm leading-relaxed">{report.stageVerdict}</p>}
+
+      {next && report.carryOver && report.carryOver.length > 0 && (
+        <div className="mt-4 rounded-2xl bg-white/70 p-4">
+          <p className="text-xs font-semibold">下一關的面試官會知道：</p>
+          <ul className="mt-1.5 space-y-1 text-sm text-ink/80">
+            {report.carryOver.map((c) => (
+              <li key={c} className="flex gap-2">
+                <span className="mt-2 size-1 shrink-0 rounded-full bg-ink/40" />
+                {c}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {next && (
+          <button
+            onClick={onNextStage}
+            className={`group inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium transition ${
+              passed ? "bg-ink text-white hover:bg-accent" : "bg-white/80 text-ink hover:bg-white"
+            }`}
+          >
+            {passed ? `進入第 ${next.no} 關：${next.name}` : `仍要挑戰第 ${next.no} 關`}
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          </button>
+        )}
+        <button
+          onClick={onRetryStage}
+          className={`inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium transition ${
+            passed ? "bg-white/80 text-ink hover:bg-white" : "bg-ink text-white hover:bg-accent"
+          }`}
+        >
+          <RotateCcw className="size-4" />
+          重練第 {current.no} 關
+        </button>
+      </div>
+    </section>
   );
 }

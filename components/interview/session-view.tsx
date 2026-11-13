@@ -9,9 +9,9 @@
  */
 "use client";
 
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Clock, Coins, Layers, MessagesSquare, MonitorPlay } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { Interviewer, InterviewSetup, Question, Research, Turn } from "@/lib/types";
+import { getStage, type Interviewer, type InterviewSetup, type Question, type Research, type Turn } from "@/lib/types";
 import type { Loading } from "./interview-app";
 import FeedbackCard from "./feedback-card";
 import Waveform from "@/components/waveform";
@@ -81,6 +81,11 @@ export default function SessionView(props: Props) {
           <Avatar name={interviewer.name} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
+              {getStage(setup.stage) && (
+                <span className="rounded-full bg-ink px-2.5 py-0.5 text-[11px] font-medium text-white">
+                  第 {setup.stage} 關・{getStage(setup.stage)?.name}
+                </span>
+              )}
               <h1 className="text-lg font-semibold">{interviewer.name}</h1>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] text-muted">
                 <span className={`size-1.5 rounded-full ${status.dot} ${status.active ? "animate-pulse" : ""}`} />
@@ -190,7 +195,8 @@ export default function SessionView(props: Props) {
         </section>
 
         {/* ================= 右側：情報側欄 ================= */}
-        <aside className="space-y-4 lg:sticky lg:top-60 lg:self-start">
+        {/* 內容較長，大螢幕上側欄自己捲動，不會被固定定位卡住 */}
+        <aside className="space-y-4 lg:sticky lg:top-60 lg:max-h-[calc(100vh-16rem)] lg:self-start lg:overflow-y-auto">
           <div className="glass rounded-3xl p-5">
             <div className="flex items-center justify-between">
               <h2 className="font-mono text-xs tracking-widest text-muted uppercase">面試情報</h2>
@@ -204,6 +210,8 @@ export default function SessionView(props: Props) {
             </div>
             <p className="mt-3 text-sm leading-relaxed text-ink/80">{research.summary}</p>
 
+            <ResearchDetails research={research} />
+
             <h3 className="mt-5 mb-2 text-xs font-semibold">常考重點</h3>
             <div className="flex flex-wrap gap-1.5">
               {research.focusAreas.map((f) => (
@@ -214,9 +222,12 @@ export default function SessionView(props: Props) {
             </div>
 
             {research.sources.length > 0 && (
-              <>
-                <h3 className="mt-5 mb-2 text-xs font-semibold">參考來源</h3>
-                <ul className="space-y-1.5">
+              // 參考來源收合在最下面，需要查證時再展開
+              <details className="group mt-5">
+                <summary className="cursor-pointer text-xs font-semibold text-muted marker:text-accent hover:text-ink">
+                  參考來源（{research.sources.length}）
+                </summary>
+                <ul className="mt-2 space-y-1.5">
                   {research.sources.map((s) => (
                     <li key={s.url}>
                       <a
@@ -231,7 +242,7 @@ export default function SessionView(props: Props) {
                     </li>
                   ))}
                 </ul>
-              </>
+              </details>
             )}
           </div>
 
@@ -250,6 +261,121 @@ export default function SessionView(props: Props) {
 }
 
 /* ---------- 子元件 ---------- */
+
+/**
+ * 面經整理出的具體數據：面試流程、常見題目（幾篇提到）、薪資行情
+ * 舊版開始的面試沒有這些欄位，就整段不顯示。
+ */
+function ResearchDetails({ research }: { research: Research }) {
+  const { process, commonQuestions = [], salary, reportsCount = 0 } = research;
+  const maxMentions = Math.max(...commonQuestions.map((q) => q.mentions), 1);
+  const counted = commonQuestions.some((q) => q.mentions > 0); // 沒連網時次數都是 0，就不顯示次數
+
+  return (
+    <>
+      {process && (
+        <>
+          <h3 className="mt-5 mb-2 text-xs font-semibold">面試流程</h3>
+          <dl className="space-y-1.5 text-xs">
+            {[
+              { Icon: Layers, label: "關卡", value: process.rounds },
+              { Icon: Clock, label: "時長", value: process.duration },
+              { Icon: MonitorPlay, label: "形式", value: process.format },
+            ].map(({ Icon, label, value }) => (
+              <div key={label} className="flex gap-2 rounded-xl bg-white/70 px-2.5 py-2">
+                <Icon className="mt-px size-3.5 shrink-0 text-accent" />
+                <dt className="shrink-0 text-muted">{label}</dt>
+                <dd className="leading-relaxed">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      )}
+
+      {commonQuestions.length > 0 && (
+        <>
+          <h3 className="mt-5 mb-2 flex items-baseline justify-between text-xs font-semibold">
+            <span className="flex items-center gap-1.5">
+              <MessagesSquare className="size-3.5 text-accent" />
+              常見題目
+            </span>
+            <span className="font-normal text-muted">{counted && reportsCount > 0 ? `統計 ${reportsCount} 篇面經` : "同業常見題"}</span>
+          </h3>
+          <ol className="space-y-2">
+            {commonQuestions.map((q, i) => (
+              <li key={`${q.question}-${i}`} className="text-xs">
+                <div className="flex gap-2">
+                  <span className="min-w-0 flex-1 leading-relaxed">{q.question}</span>
+                  {counted && <span className="shrink-0 font-medium text-accent tabular-nums">{q.mentions} 篇</span>}
+                </div>
+                {counted && (
+                  // 長條長度 = 提到這題的篇數，和最多的那題相比
+                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-ink/5">
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${(q.mentions / maxMentions) * 100}%` }} />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+
+      {salary && salary.levels.length > 0 && (
+        <>
+          <h3 className="mt-5 mb-2 flex items-center justify-between text-xs font-semibold">
+            <span className="flex items-center gap-1.5">
+              <Coins className="size-3.5 text-accent" />
+              薪資行情
+            </span>
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${salary.found ? "bg-good-soft text-good" : "bg-warn-soft text-warn"}`}>
+              {salary.found ? "薪資分享" : "同業估算"}
+            </span>
+          </h3>
+          <table className="w-full text-xs">
+            <tbody>
+              {salary.levels.map((l) => (
+                <tr key={l.seniority} className="border-b border-ink/5 last:border-0">
+                  <td className="py-1.5 text-muted">{l.seniority}</td>
+                  <td className="py-1.5 text-right font-medium tabular-nums">{l.range}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {salary.note && <p className="mt-1.5 text-[11px] leading-relaxed text-muted">{salary.note}</p>}
+
+          {/* 依候選人年資換算的個人估值（轉職者特別需要） */}
+          {salary.personal?.applicable && (
+            <div className="mt-3 rounded-2xl border border-accent/30 bg-accent-soft/60 p-3">
+              <p className="text-[11px] font-semibold text-accent">你的估值</p>
+              <p className="mt-0.5 text-base font-semibold tabular-nums">{salary.personal.range}</p>
+              <p className="text-[11px] text-muted">{salary.personal.basis}</p>
+              {salary.personal.reasoning.length > 0 && (
+                <ul className="mt-2 space-y-1 text-[11px] leading-relaxed">
+                  {salary.personal.reasoning.map((r) => (
+                    <li key={r} className="flex gap-1.5">
+                      <span className="mt-1.5 size-1 shrink-0 rounded-full bg-accent" />
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {salary.personal.tips.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[11px] font-medium text-accent">談薪建議</summary>
+                  <ul className="mt-1 space-y-1 text-[11px] leading-relaxed">
+                    {salary.personal.tips.map((t) => (
+                      <li key={t}>・{t}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
 
 /** 面試官頭像：取名字第一個字，漸層圓形 + 右下角在線綠點 */
 function Avatar({ name, size = "size-14 text-xl" }: { name: string; size?: string }) {

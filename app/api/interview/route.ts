@@ -7,38 +7,59 @@
  *        用使用者自己的 OpenAI 金鑰呼叫模型（Bring Your Own Key）。
  *
  * 【動作】前端送來 { action, ... }，依 action 分派：
- *   verify → 驗證金鑰是否可用（設定視窗的「測試並儲存」）
- *   start  → 上網搜尋公司面經 → 回傳面試官角色 + 情報 + 第一題
+ *   verify  → 驗證金鑰是否可用（設定視窗的「測試並儲存」）
+ *   analyze → 讀取會員自己的履歷，對照職缺 → 回傳候選人摘要 + 面試官的追問重點（需登入）
+ *   start   → 上網搜尋公司面經 → 回傳面試官角色 + 情報 + 第一題
+ *             （連續闖關的下一關會帶上一關的 research，就不再搜尋，只換面試官並開場）
  *   answer → 評分使用者回答 → 回傳回饋 + 下一題（最後一題固定是反問環節，答完 nextQuestion = null）
  *   report → 綜合整場表現 → 回傳「高管級面試戰力診斷書」
  *
  * 伺服器「不存」面試內容（stateless），完整的對話紀錄由前端保存，每次請求都一併送上來。
  *
- * 【使用紀錄】start / answer / report 每次都會在回應送出後（after）寫一筆 usageevents：
+ * 【履歷與規則】setup 裡的 candidate（追問重點）與 presets / customRules（面試官規則）由前端保存並每次帶上，
+ *   伺服器先 normalizeSetup() 限制長度與數量，再放進提示詞。
+ *
+ * 【使用紀錄】analyze / start / answer / report 每次都會在回應送出後（after）寫一筆 usageevents：
  *   token 用量、估算成本、耗時、成功或錯誤訊息，給後台統計用；不存回答內容與金鑰。
  *   前端用 X-Client-Id（匿名瀏覽器 ID）與 X-Session-Id（這場練習的 ID）標頭帶上身分。
  *
  * 【權限】停權的會員不能使用；後台開啟「需要登入」時，訪客不能開始新的面試。
  */
+import { Types } from "mongoose";
 import { after } from "next/server";
 import { getCurrentUser, getSessionUserId } from "@/lib/auth";
 import { MODEL, askJSON, describeOpenAIError, verifyApiKey } from "@/lib/openai";
 import { EMPTY_USAGE, getSettings, type TokenUsage } from "@/lib/settings";
 import { readTrackingHeaders, recordEvent } from "@/lib/usage";
+import { connectDB } from "@/lib/mongodb";
+import { ResumeModel } from "@/lib/models/resume";
 import {
+  analyzeSchema,
   answerSchema,
+  buildAnalyzeInput,
   buildAnswerInput,
+  buildRoundStartInput,
+  followUpStreak,
+  maxFollowUps,
   buildPersona,
   buildReportInput,
   buildStartInput,
   reportSchema,
   reverseAnswerSchema,
+  roundStartSchema,
+  stageReportSchema,
   startSchema,
 } from "@/lib/prompts";
 import {
   API_KEY_HEADER,
   COMPETENCIES,
+  CUSTOM_RULE_LIMIT,
+  FOCUS_TYPES,
+  RULE_PRESETS,
+  getStage,
   type ActionItem,
+  type AnalyzeResponse,
+  type CandidateBrief,
   type AnswerFeedback,
   type AnswerResponse,
   type FinalReport,
@@ -46,6 +67,8 @@ import {
   type InterviewSetup,
   type Question,
   type ReportResponse,
+  type Research,
+  type RoundSummary,
   type StartResponse,
   type VerifyResponse,
 } from "@/lib/types";
@@ -84,6 +107,7 @@ export async function POST(request: Request) {
 
   const setupError = validateSetup(body.setup);
   if (setupError) return Response.json({ error: setupError }, { status: 400 });
+  body.setup = normalizeSetup(body.setup);
 
   // 4) 身分與權限（資料庫連不上時當作訪客，不影響面試本身）
   const sessionUserId = await getSessionUserId();
@@ -91,6 +115,9 @@ export async function POST(request: Request) {
   if (sessionUserId && !user) {
     // 有登入 Cookie 但查不到可用的帳號 → 已停權或帳號被刪除
     return Response.json({ error: "你的帳號目前無法使用模擬面試，請重新登入或聯絡我們。" }, { status: 403 });
+  }
+  if (body.action === "analyze" && !user) {
+    return Response.json({ error: "請先登入，才能使用帳號裡保存的履歷。" }, { status: 401 });
   }
   if (body.action === "start" && !user) {
     const requireLogin = await getSettings()
@@ -106,11 +133,13 @@ export async function POST(request: Request) {
     industry: body.setup.industry.slice(0, 50),
     company: body.setup.company.slice(0, 50),
     totalQuestions: body.setup.totalQuestions,
+    withResume: !!body.setup.candidate, // 後台可以比較「有沒有用履歷」的完成率與分數
+    stage: body.setup.stage ?? null, // 第幾關（舊版不分關是 null）
   };
   const log = (ok: boolean, httpStatus: number, errorMessage = "") =>
     after(() =>
       recordEvent({
-        type: `interview_${body.action}` as "interview_start" | "interview_answer" | "interview_report",
+        type: `interview_${body.action}` as "interview_analyze" | "interview_start" | "interview_answer" | "interview_report",
         userId: user?.id,
         ...readTrackingHeaders(request),
         ok,
@@ -124,10 +153,24 @@ export async function POST(request: Request) {
     );
 
   try {
-    let result: StartResponse | AnswerResponse | ReportResponse;
+    let result: AnalyzeResponse | StartResponse | AnswerResponse | ReportResponse;
     switch (body.action) {
+      case "analyze": {
+        if (!Types.ObjectId.isValid(body.resumeId)) return Response.json({ error: "找不到這份履歷" }, { status: 404 });
+        await connectDB();
+        // 同時比對 userId：只能讀自己的履歷
+        const resume = await ResumeModel.findOne({ _id: body.resumeId, userId: user!.id }).lean();
+        if (!resume) return Response.json({ error: "找不到這份履歷，可能已經被刪除" }, { status: 404 });
+        result = await handleAnalyze(apiKey, body.setup, resume.text, meter);
+        meta.focusPoints = (result as AnalyzeResponse).candidate.focusPoints.length;
+        break;
+      }
       case "start":
-        result = await handleStart(apiKey, body.setup, meter);
+        // 連續闖關的下一關：沿用上一關的情報，不重新搜尋
+        result =
+          body.research && body.setup.stage
+            ? await handleRoundStart(apiKey, body.setup, normalizeResearch(body.research), meter)
+            : await handleStart(apiKey, body.setup, meter);
         break;
       case "answer":
         if (!body.answer?.trim()) return Response.json({ error: "請先輸入回答" }, { status: 400 });
@@ -151,6 +194,21 @@ export async function POST(request: Request) {
     log(false, status, err instanceof Error ? err.message : message);
     return Response.json({ error: message }, { status });
   }
+}
+
+/* ------------------------------------------------------------
+ * analyze：讀履歷 → 候選人摘要 + 追問重點
+ * ------------------------------------------------------------ */
+async function handleAnalyze(apiKey: string, setup: InterviewSetup, resumeText: string, meter: TokenUsage): Promise<AnalyzeResponse> {
+  const { data, usage } = await askJSON<CandidateBrief>({
+    apiKey,
+    instructions: buildPersona(),
+    input: buildAnalyzeInput(setup, resumeText),
+    schemaName: "resume_analysis",
+    schema: analyzeSchema,
+  });
+  addUsage(meter, usage);
+  return { candidate: normalizeCandidate(data) ?? { summary: "", focusPoints: [] } };
 }
 
 /** 把一次 OpenAI 呼叫的用量累加到這次請求的總計 */
@@ -180,7 +238,12 @@ async function handleStart(apiKey: string, setup: InterviewSetup, meter: TokenUs
     // 若只是 web_search 不支援或搜尋失敗，退而求其次：用模型本身的知識綜合同業資料
     console.warn("[start] web search 失敗，改用模型內建知識");
     result = await askJSON<StartResponse>(params);
-    result.data.research.companyDataFound = false;
+    const r = result.data.research;
+    r.companyDataFound = false;
+    // 沒有真的上網讀面經，篇數與「幾篇提到」都是模型自己估的，歸零避免誤導
+    r.reportsCount = 0;
+    r.commonQuestions = r.commonQuestions?.map((q) => ({ ...q, mentions: 0 }));
+    if (r.salary) r.salary = { ...r.salary, found: false, note: `未能連網搜尋，以下為模型依同業行情推估。${r.salary.note}` };
   }
 
   addUsage(meter, result.usage);
@@ -194,11 +257,37 @@ async function handleStart(apiKey: string, setup: InterviewSetup, meter: TokenUs
     return true;
   });
 
+  const r = data.research;
   return {
     interviewer: data.interviewer,
-    research: { ...data.research, sources: sources.slice(0, 8) },
+    research: {
+      ...r,
+      sources: sources.slice(0, 8),
+      reportsCount: Math.max(0, Math.round(r.reportsCount ?? 0)),
+      // 依出現次數由多到少，最多 10 題
+      commonQuestions: (r.commonQuestions ?? [])
+        .map((q) => ({ ...q, mentions: Math.max(0, Math.round(q.mentions)) }))
+        .sort((a, b) => b.mentions - a.mentions)
+        .slice(0, 10),
+      salary: r.salary ? { ...r.salary, levels: r.salary.levels.slice(0, 5) } : undefined,
+    },
     question: { ...data.question, kind: "new" }, // 第一題一定是新題目
   };
+}
+
+/* ------------------------------------------------------------
+ * start（連續闖關的下一關）：沿用情報，只換面試官並開場
+ * ------------------------------------------------------------ */
+async function handleRoundStart(apiKey: string, setup: InterviewSetup, research: Research, meter: TokenUsage): Promise<StartResponse> {
+  const { data, usage } = await askJSON<Omit<StartResponse, "research">>({
+    apiKey,
+    instructions: buildPersona(),
+    input: buildRoundStartInput(setup, research),
+    schemaName: "interview_round_start",
+    schema: roundStartSchema,
+  });
+  addUsage(meter, usage);
+  return { interviewer: data.interviewer, research, question: { ...data.question, kind: "new" } };
 }
 
 /* ------------------------------------------------------------
@@ -245,11 +334,11 @@ async function handleAnswer(
 
   // 保險：就算模型沒遵守規則，伺服器端也強制修正題目類型
   //   - 輪到反問環節 → 一定是 reverse
-  //   - 上一題是追問 → 不能再追問
+  //   - 這個主題已經連續追問到上限（依關卡，舊版 1 次）→ 不能再追問
   //   - 還沒輪到 → 不能提早出反問
   let kind = data.nextQuestion.kind;
   if (nextIsReverse) kind = "reverse";
-  else if (kind === "reverse" || (kind === "follow-up" && currentQuestion.kind === "follow-up")) kind = "new";
+  else if (kind === "reverse" || (kind === "follow-up" && followUpStreak(history, currentQuestion) >= maxFollowUps(setup))) kind = "new";
 
   return {
     feedback: clampFeedback(data.feedback),
@@ -275,7 +364,8 @@ async function handleReport(
     instructions: buildPersona(body.interviewer),
     input: buildReportInput(body.setup, body.research, body.history),
     schemaName: "interview_report",
-    schema: reportSchema,
+    // 分關面試的診斷書多了「是否通過」與「留給下一關的重點」
+    schema: body.setup.stage ? stageReportSchema : reportSchema,
   });
   addUsage(meter, usage);
 
@@ -290,6 +380,7 @@ async function handleReport(
       ...data,
       overallScore: clamp(data.overallScore, 0, 100),
       competencies,
+      carryOver: data.carryOver?.slice(0, 6),
       // 把「第幾天」換算成實際日期（YYYY-MM-DD），並依日期排序
       actionPlan: data.actionPlan
         .map(({ dayOffset, ...item }) => ({ ...item, date: addDays(clamp(dayOffset, 1, 30)) }))
@@ -310,6 +401,110 @@ function validateSetup(setup: InterviewSetup | undefined): string | null {
   if (!setup.jobDescription?.trim()) return "請填寫職缺描述";
   if (![6, 8, 10].includes(setup.totalQuestions)) return "題數只能是 6、8 或 10";
   return null;
+}
+
+/**
+ * 整理前端送來的履歷摘要與規則：限制數量與長度、丟掉格式不對的項目。
+ * 這些內容會原封不動放進提示詞，不限制的話可能被塞進超長文字，增加 token 成本。
+ */
+function normalizeSetup(setup: InterviewSetup): InterviewSetup {
+  const presetKeys = RULE_PRESETS.map((r) => r.key) as string[];
+  return {
+    industry: setup.industry,
+    company: setup.company,
+    jobDescription: setup.jobDescription,
+    totalQuestions: setup.totalQuestions,
+    candidate: normalizeCandidate(setup.candidate),
+    presets: Array.isArray(setup.presets) ? setup.presets.filter((k) => presetKeys.includes(k)) : [],
+    stage: getStage(setup.stage)?.no,
+    profile: normalizeProfile(setup.profile),
+    previousRounds: normalizeRounds(setup.previousRounds),
+    customRules: Array.isArray(setup.customRules)
+      ? setup.customRules
+          .filter((r): r is string => typeof r === "string" && r.trim() !== "")
+          .slice(0, CUSTOM_RULE_LIMIT.count)
+          .map((r) => r.trim().slice(0, CUSTOM_RULE_LIMIT.length))
+      : [],
+  };
+}
+
+/** 年資只接受 0～50 的數字；目前薪資是自由文字，限制長度 */
+function normalizeProfile(p: InterviewSetup["profile"]): InterviewSetup["profile"] {
+  if (!p || typeof p !== "object") return undefined;
+  const years = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 50 ? Math.round(v * 10) / 10 : undefined);
+  const profile = {
+    totalYears: years(p.totalYears),
+    relevantYears: years(p.relevantYears),
+    currentSalary: typeof p.currentSalary === "string" && p.currentSalary.trim() ? p.currentSalary.trim().slice(0, 40) : undefined,
+  };
+  return Object.values(profile).some((v) => v !== undefined) ? profile : undefined;
+}
+
+/** 前幾關的紀錄最多 2 關（第三關前面只有一、二關），字數也限制 */
+function normalizeRounds(rounds: RoundSummary[] | undefined): RoundSummary[] {
+  if (!Array.isArray(rounds)) return [];
+  return rounds
+    .filter((r) => r && getStage(r.stage) && Array.isArray(r.carryOver))
+    .slice(-2)
+    .map((r) => ({
+      stage: r.stage,
+      interviewer: String(r.interviewer ?? "").slice(0, 80),
+      passed: !!r.passed,
+      overallScore: clamp(Number(r.overallScore) || 0, 0, 100),
+      summary: String(r.summary ?? "").slice(0, 300),
+      carryOver: r.carryOver.slice(0, 6).map((c) => String(c).slice(0, 150)),
+    }));
+}
+
+/** 前端帶回來的情報（連續闖關沿用）：限制長度，避免被塞超長內容 */
+function normalizeResearch(r: Research): Research {
+  const str = (v: unknown, n: number) => String(v ?? "").slice(0, n);
+  return {
+    companyDataFound: !!r.companyDataFound,
+    summary: str(r.summary, 1000),
+    focusAreas: (r.focusAreas ?? []).slice(0, 8).map((f) => str(f, 60)),
+    sources: (r.sources ?? []).slice(0, 8).map((x) => ({ title: str(x.title, 150), url: str(x.url, 500) })),
+    reportsCount: Number(r.reportsCount) || 0,
+    process: r.process
+      ? { rounds: str(r.process.rounds, 200), duration: str(r.process.duration, 200), format: str(r.process.format, 200) }
+      : undefined,
+    commonQuestions: (r.commonQuestions ?? [])
+      .slice(0, 10)
+      .map((q) => ({ question: str(q.question, 200), category: str(q.category, 30), mentions: Number(q.mentions) || 0 })),
+    salary: r.salary
+      ? {
+          found: !!r.salary.found,
+          levels: (r.salary.levels ?? []).slice(0, 5).map((l) => ({ seniority: str(l.seniority, 30), range: str(l.range, 60) })),
+          note: str(r.salary.note, 200),
+          personal: r.salary.personal
+            ? {
+                applicable: !!r.salary.personal.applicable,
+                basis: str(r.salary.personal.basis, 200),
+                range: str(r.salary.personal.range, 80),
+                reasoning: (r.salary.personal.reasoning ?? []).slice(0, 5).map((x) => str(x, 200)),
+                tips: (r.salary.personal.tips ?? []).slice(0, 4).map((x) => str(x, 200)),
+              }
+            : undefined,
+        }
+      : undefined,
+  };
+}
+
+function normalizeCandidate(c: CandidateBrief | null | undefined): CandidateBrief | null {
+  if (!c || typeof c.summary !== "string" || !Array.isArray(c.focusPoints)) return null;
+  const e = c.experience;
+  const yrs = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.min(50, Math.max(0, Math.round(v * 10) / 10)) : 0);
+  return {
+    summary: c.summary.slice(0, 800),
+    experience:
+      e && typeof e === "object"
+        ? { totalYears: yrs(e.totalYears), relevantYears: yrs(e.relevantYears), careerChange: !!e.careerChange, note: String(e.note ?? "").slice(0, 200) }
+        : undefined,
+    focusPoints: c.focusPoints
+      .filter((p) => p && FOCUS_TYPES.includes(p.type) && typeof p.title === "string" && typeof p.detail === "string")
+      .slice(0, 10)
+      .map((p) => ({ type: p.type, title: p.title.slice(0, 120), detail: p.detail.slice(0, 300) })),
+  };
 }
 
 /** 把數字限制在範圍內（JSON Schema 的 strict 模式不支援 minimum/maximum，所以自己處理） */

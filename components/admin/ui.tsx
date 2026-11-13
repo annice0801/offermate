@@ -141,6 +141,7 @@ export function Avatar({ src, name, size = 8 }: { src: string; name: string; siz
 }
 
 export const EVENT_LABELS: Record<string, string> = {
+  interview_analyze: "分析履歷",
   interview_start: "開始面試",
   interview_answer: "回答題目",
   interview_report: "產生診斷書",

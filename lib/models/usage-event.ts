@@ -4,7 +4,7 @@
  * 後台的所有統計（使用量、使用時間、下載、錯誤、token、成本）都從這張表算出來。
  *
  * type：
- *   interview_start / interview_answer / interview_report → 伺服器呼叫 OpenAI（有 token 與成本）
+ *   interview_analyze / interview_start / interview_answer / interview_report → 伺服器呼叫 OpenAI（有 token 與成本）
  *   download_pdf / download_png                          → 使用者下載診斷書（前端回報）
  *   client_error                                         → 前端發生的錯誤（前端回報）
  *
@@ -16,6 +16,7 @@
 import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
 
 export const EVENT_TYPES = [
+  "interview_analyze",
   "interview_start",
   "interview_answer",
   "interview_report",

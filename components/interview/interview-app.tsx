@@ -16,8 +16,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { getStage } from "@/lib/types";
 import type {
+  AnalyzeResponse,
   AnswerResponse,
+  CandidateBrief,
   FinalReport,
   InterviewRequest,
   InterviewSetup,
@@ -25,6 +28,7 @@ import type {
   Question,
   ReportResponse,
   Research,
+  RoundSummary,
   StartResponse,
   Turn,
 } from "@/lib/types";
@@ -105,13 +109,37 @@ export default function InterviewApp() {
     }
   }
 
+  /* ---------- 階段 1：讀履歷產生追問重點（不屬於任何一場面試，所以不帶 sessionId） ---------- */
+  async function analyzeResume(s: InterviewSetup, resumeId: string): Promise<CandidateBrief> {
+    const data = await callInterviewApi<AnalyzeResponse>({ action: "analyze", setup: s, resumeId }, null);
+    return data.candidate;
+  }
+
   /* ---------- 階段 1 → 2：開始面試 ---------- */
-  function startInterview(s: InterviewSetup) {
-    setSetup(s);
+  // reuseResearch：連續闖關或重練同一關時沿用已經搜尋好的面試情報，不再重新搜尋
+  function startInterview(input: InterviewSetup, analyzeFirst: boolean, reuseResearch?: Research) {
+    setSetup(input);
     sessionIdRef.current = newSessionId();
     setSessionId(sessionIdRef.current);
     run("start", async () => {
-      const data = await callInterviewApi<StartResponse>({ action: "start", setup: s }, sessionIdRef.current);
+      // 選了履歷但還沒分析 → 先分析，把追問重點放進設定再開始
+      let s = input;
+      if (analyzeFirst && input.resumeId) {
+        const brief = await analyzeResume(input, input.resumeId);
+        // 使用者沒填年資時，用履歷推算的年資（薪資估值會用到）
+        const exp = brief.experience;
+        s = {
+          ...input,
+          candidate: brief,
+          profile: {
+            ...input.profile,
+            totalYears: input.profile?.totalYears ?? exp?.totalYears,
+            relevantYears: input.profile?.relevantYears ?? exp?.relevantYears,
+          },
+        };
+        setSetup(s); // 萬一開始失敗，回到表單時也看得到分析結果
+      }
+      const data = await callInterviewApi<StartResponse>({ action: "start", setup: s, research: reuseResearch }, sessionIdRef.current);
       setInterviewer(data.interviewer);
       setResearch(data.research);
       setCurrentQuestion(data.question);
@@ -169,6 +197,49 @@ export default function InterviewApp() {
   }
 
   /* ---------- 重新開始：清空所有狀態 ---------- */
+  /* ---------- 分關面試：進入下一關 / 重練這一關 ---------- */
+  /** 清掉這一場的對話，回到設定頁（開始中會顯示載入畫面；失敗時停在設定頁可以再按開始） */
+  function resetSession() {
+    setStage("setup");
+    setInterviewer(null);
+    setHistory([]);
+    setCurrentQuestion(null);
+    setPendingAnswer(null);
+    setReport(null);
+    setError(null);
+    window.scrollTo({ top: 0 });
+  }
+
+  function nextStage() {
+    const next = getStage(((setup?.stage ?? 0) + 1) as 2 | 3);
+    if (!setup?.stage || !next || !report || !interviewer || !research) return;
+    // 這一關的重點交給下一關的面試官
+    const round: RoundSummary = {
+      stage: setup.stage,
+      interviewer: `${interviewer.name}（${interviewer.title}）`,
+      passed: !!report.stagePassed,
+      overallScore: report.overallScore,
+      summary: report.stageVerdict || report.summary,
+      carryOver: report.carryOver ?? [],
+    };
+    const nextSetup: InterviewSetup = {
+      ...setup,
+      stage: next.no,
+      totalQuestions: next.defaultQuestions,
+      previousRounds: [...(setup.previousRounds ?? []).filter((r) => r.stage < setup.stage!), round],
+    };
+    const reuse = research;
+    resetSession();
+    startInterview(nextSetup, false, reuse);
+  }
+
+  function retryStage() {
+    if (!setup || !research) return;
+    const reuse = research;
+    resetSession();
+    startInterview(setup, false, reuse);
+  }
+
   function restart() {
     setStage("setup");
     setInterviewer(null);
@@ -185,10 +256,13 @@ export default function InterviewApp() {
   if (stage === "setup") {
     return (
       <SetupForm
+        // 自動分析完成時重新掛載表單，讓表單帶入分析結果（開始失敗回到表單時才看得到）
+        key={setup?.candidate ? "analyzed" : "fresh"}
         initial={setup}
         loading={loading === "start"}
         error={error}
         onSubmit={startInterview}
+        onAnalyze={analyzeResume}
       />
     );
   }
@@ -220,6 +294,8 @@ export default function InterviewApp() {
         history={history}
         sessionId={sessionId}
         onRestart={restart}
+        onNextStage={nextStage}
+        onRetryStage={retryStage}
       />
     );
   }
